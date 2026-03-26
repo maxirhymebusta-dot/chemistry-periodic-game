@@ -1,11 +1,132 @@
 import streamlit as st
 import random
 import time
+import json
 
-# 1. Page Configuration
+# 1. Page Configuration & Custom CSS for the Dynamic Background
 st.set_page_config(page_title="MSc Periodic Master", page_icon="🧪", layout="wide")
 
-# 2. Complete 8-Level Curriculum Data
+st.markdown("""
+<style>
+/* 1. Animated Chemistry Background */
+@keyframes backgroundAnimation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes particleRotate {
+    from { transform: rotate(0deg) translate(20px) rotate(0deg); }
+    to { transform: rotate(360deg) translate(20px) rotate(-360deg); }
+}
+
+.stApp {
+    background: linear-gradient(-45deg, #1a1a2e, #16213e, #1a1a2e);
+    background-size: 400% 400%;
+    animation: backgroundAnimation 20s ease infinite;
+    overflow: hidden;
+}
+
+/* Glassmorphism Containers */
+[data-testid="stVerticalBlock"] > div:has(div.instruction-box),
+[data-testid="stVerticalBlock"] > div:has(div.wheel-container),
+.stExpander {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* 2. Text Beautification */
+h1, h2, h3, h4, .stMarkdown, p, li, label {
+    color: #e0e0e0 !important;
+    font-family: 'Poppins', sans-serif;
+}
+
+.main-title {
+    text-align: center;
+    color: #4facfe !important; /* Cool Blue */
+    font-size: 50px;
+    font-weight: 800;
+    margin-bottom: 0px;
+    text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+}
+
+.subtitle {
+    text-align: center;
+    color: #b8c1ec !important; /* Soft Blue/Purple */
+    font-size: 18px;
+    margin-bottom: 40px;
+}
+
+/* 3. Instruction Box Update */
+.instruction-box {
+    color: #e0e0e0;
+    border-left: 5px solid #4facfe;
+    background-color: transparent !important;
+}
+
+/* 4. The Spinning Wheel Design */
+.wheel-container { display: flex; justify-content: center; align-items: center; height: 350px; position: relative; }
+.wheel {
+    width: 250px; height: 250px; border-radius: 50%; border: 8px solid #FFD700;
+    position: relative; overflow: hidden;
+    /* We use brighter colors for the segments so they pop against the dark background */
+    background: conic-gradient(#FF4136 0% 20%, #2ECC40 20% 40%, #0074D9 40% 60%, #FFDC00 60% 80%, #B10DC9 80% 100%);
+    transition: transform 3s cubic-bezier(0.1, 0, 0, 1);
+    z-index: 1;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+.wheel-pointer { position: absolute; top: 15px; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 40px solid #FFD700; z-index: 10; }
+.wheel-num { position: absolute; font-weight: bold; color: white; font-size: 26px; pointer-events: none; text-shadow: 1px 1px 2px black; }
+
+/* 5. Component Styling */
+.stButton>button {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    color: white; border: none; font-weight: bold; border-radius: 10px;
+}
+.stButton>button:hover { background: linear-gradient(45deg, #00f2fe, #4facfe); }
+.stProgress > div > div > div > div { background-color: #4facfe; }
+
+/* 6. Radio (ABCD) options text color */
+[data-testid="stMarkdownContainer"] p {
+    color: white;
+}
+
+/* 7. Footer */
+.footer { text-align: center; padding: 40px; color: #b8c1ec; font-style: italic; font-size: 14px; }
+</style>
+""", unsafe_allow_html=True)
+
+# 2. Add Animated Chemistry Background Icons (SVGs)
+st.markdown("""
+<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; pointer-events: none;">
+    <svg width="60" height="60" viewBox="0 0 60 60" style="position: absolute; top: 10%; left: 5%; animation: particleRotate 10s linear infinite;">
+        <path d="M48 40V12H36V8H24V12H12V40C12 46.6 17.4 52 24 52H36C42.6 52 48 46.6 48 40ZM28 12H32V40C32 42.2 30.2 44 28 44H20C17.8 44 16 42.2 16 40V12H20V20H24V12H28Z" fill="#b8c1ec"/>
+    </svg>
+    <svg width="80" height="80" viewBox="0 0 100 100" style="position: absolute; top: 15%; right: 10%; animation: particleRotate 15s linear infinite;">
+        <circle cx="20" cy="50" r="15" stroke="#b8c1ec" stroke-width="3" fill="none"/>
+        <circle cx="80" cy="50" r="15" stroke="#b8c1ec" stroke-width="3" fill="none"/>
+        <line x1="35" y1="50" x2="65" y2="50" stroke="#b8c1ec" stroke-width="3"/>
+        <line x1="35" y1="50" x2="65" y2="50" stroke="#b8c1ec" stroke-width="3"/>
+    </svg>
+    <svg width="100" height="100" viewBox="0 0 100 100" style="position: absolute; bottom: 15%; left: 10%; animation: particleRotate 20s linear infinite;">
+        <circle cx="50" cy="50" r="10" fill="#b8c1ec"/>
+        <ellipse cx="50" cy="50" rx="40" ry="15" stroke="#b8c1ec" stroke-width="3" fill="none" transform="rotate(45 50 50)"/>
+        <ellipse cx="50" cy="50" rx="40" ry="15" stroke="#b8c1ec" stroke-width="3" fill="none" transform="rotate(-45 50 50)"/>
+    </svg>
+    <svg width="70" height="70" viewBox="0 0 60 60" style="position: absolute; bottom: 10%; right: 5%; animation: particleRotate 12s linear infinite;">
+        <rect x="5" y="5" width="50" height="50" rx="5" stroke="#b8c1ec" stroke-width="3" fill="none"/>
+        <text x="30" y="35" text-anchor="middle" font-size="20" fill="#b8c1ec">H</text>
+    </svg>
+</div>
+""", unsafe_allow_html=True)
+
+# 3. Advanced Curriculum Data
 if 'levels_data' not in st.session_state:
     st.session_state.levels_data = {
         1: {"name": "Period 1 & 2 Essentials", "data": [
@@ -21,71 +142,10 @@ if 'levels_data' not in st.session_state:
             {"id": 3, "q": "Which Group 2 element burns with a white flame?", "options": ["A) Beryllium", "B) Calcium", "C) Magnesium", "D) Barium"], "ans": "C) Magnesium"},
             {"id": 4, "q": "Identify the element: Group 1, Period 4.", "options": ["A) Sodium", "B) Potassium", "C) Rubidium", "D) Cesium"], "ans": "B) Potassium"},
             {"id": 5, "q": "What is the valency of elements in Group 2?", "options": ["A) +1", "B) +2", "C) -2", "D) 0"], "ans": "B) +2"}
-        ]},
-        3: {"name": "The Halogens (Group 17)", "data": [
-            {"id": 1, "q": "Which Halogen is a liquid at room temperature?", "options": ["A) Fluorine", "B) Chlorine", "C) Bromine", "D) Iodine"], "ans": "C) Bromine"},
-            {"id": 2, "q": "What is the **Atomic Number of Fluorine (F)**?", "options": ["A) 7", "B) 8", "C) 9", "D) 10"], "ans": "C) 9"},
-            {"id": 3, "q": "Which element is the most electronegative?", "options": ["A) Oxygen", "B) Fluorine", "C) Chlorine", "D) Nitrogen"], "ans": "B) Fluorine"},
-            {"id": 4, "q": "What is the common oxidation state of Halogens?", "options": ["A) +1", "B) -1", "C) +7", "D) -2"], "ans": "B) -1"},
-            {"id": 5, "q": "Which Halogen is used as a purple antiseptic?", "options": ["A) Chlorine", "B) Bromine", "C) Iodine", "D) Astatine"], "ans": "C) Iodine"}
-        ]},
-        4: {"name": "The Noble Gases (Group 18)", "data": [
-            {"id": 1, "q": "Which Noble Gas is used in orange neon signs?", "options": ["A) Helium", "B) Neon", "C) Argon", "D) Xenon"], "ans": "B) Neon"},
-            {"id": 2, "q": "What is the **Atomic Number of Argon (Ar)**?", "options": ["A) 10", "B) 18", "C) 36", "D) 54"], "ans": "B) 18"},
-            {"id": 3, "q": "Why are Noble Gases unreactive?", "options": ["A) Low Density", "B) High Mass", "C) Full Outer Shells", "D) They are rare"], "ans": "C) Full Outer Shells"},
-            {"id": 4, "q": "Which Noble Gas is radioactive?", "options": ["A) Krypton", "B) Xenon", "C) Radon", "D) Helium"], "ans": "C) Radon"},
-            {"id": 5, "q": "Which is the most abundant Noble Gas in air?", "options": ["A) Helium", "B) Neon", "C) Argon", "D) Radon"], "ans": "C) Argon"}
-        ]},
-        5: {"name": "Common Transition Metals", "data": [
-            {"id": 1, "q": "Which metal has the symbol **Fe**?", "options": ["A) Fluorine", "B) Iron", "C) Francium", "D) Fermium"], "ans": "B) Iron"},
-            {"id": 2, "q": "What is the **Atomic Number of Copper (Cu)**?", "options": ["A) 25", "B) 27", "C) 29", "D) 31"], "ans": "C) 29"},
-            {"id": 3, "q": "Which metal is used to galvanize steel?", "options": ["A) Nickel", "B) Zinc", "C) Chrome", "D) Tin"], "ans": "B) Zinc"},
-            {"id": 4, "q": "What is the symbol for Silver?", "options": ["A) Si", "B) Ag", "C) Au", "D) Sl"], "ans": "B) Ag"},
-            {"id": 5, "q": "Which metal is liquid at room temperature?", "options": ["A) Mercury", "B) Gallium", "C) Bromine", "D) Cesium"], "ans": "A) Mercury"}
-        ]},
-        6: {"name": "Metalloids & Post-Transition", "data": [
-            {"id": 1, "q": "Which element is a semiconductor used in chips?", "options": ["A) Carbon", "B) Silicon", "C) Germanium", "D) Boron"], "ans": "B) Silicon"},
-            {"id": 2, "q": "What is the symbol for Lead?", "options": ["A) Ld", "B) Le", "C) Pb", "D) Pl"], "ans": "C) Pb"},
-            {"id": 3, "q": "Which element has Atomic Number 13?", "options": ["A) Magnesium", "B) Aluminum", "C) Silicon", "D) Phosphorus"], "ans": "B) Aluminum"},
-            {"id": 4, "q": "Symbol Sn belongs to which element?", "options": ["A) Antimony", "B) Tin", "C) Selenium", "D) Strontium"], "ans": "B) Tin"},
-            {"id": 5, "q": "What is the symbol for Arsenic?", "options": ["A) Ar", "B) As", "C) An", "D) Ae"], "ans": "B) As"}
-        ]},
-        7: {"name": "The Precious Metals", "data": [
-            {"id": 1, "q": "What is the symbol for Gold?", "options": ["A) Gd", "B) Go", "C) Au", "D) Ag"], "ans": "C) Au"},
-            {"id": 2, "q": "Which metal is the best conductor of electricity?", "options": ["A) Gold", "B) Silver", "C) Copper", "D) Aluminum"], "ans": "B) Silver"},
-            {"id": 3, "q": "Symbol Pt belongs to which metal?", "options": ["A) Plutonium", "B) Platinum", "C) Palladium", "D) Protactinium"], "ans": "B) Platinum"},
-            {"id": 4, "q": "What is the Atomic Number of Gold (Au)?", "options": ["A) 47", "B) 79", "C) 80", "D) 92"], "ans": "B) 79"},
-            {"id": 5, "q": "Which metal is used in high-end jewelry and catalysts?", "options": ["A) Iron", "B) Nickel", "C) Platinum", "D) Copper"], "ans": "C) Platinum"}
-        ]},
-        8: {"name": "Radioactive & Heavy Elements", "data": [
-            {"id": 1, "q": "Which element is used as fuel in nuclear reactors?", "options": ["A) Thorium", "B) Radium", "C) Uranium", "D) Polonium"], "ans": "C) Uranium"},
-            {"id": 2, "q": "What is the symbol for Plutonium?", "options": ["A) Pl", "B) Pt", "C) Pu", "D) Po"], "ans": "C) Pu"},
-            {"id": 3, "q": "Which radioactive element was discovered by Marie Curie?", "options": ["A) Uranium", "B) Radium", "C) Radon", "D) Curium"], "ans": "B) Radium"},
-            {"id": 4, "q": "What is the Atomic Number of Uranium?", "options": ["A) 88", "B) 90", "C) 92", "D) 94"], "ans": "C) 92"},
-            {"id": 5, "q": "Which is the last element on the Periodic Table?", "options": ["A) Radon", "B) Oganesson", "C) Tennessine", "D) Livermorium"], "ans": "B) Oganesson"}
         ]}
     }
 
-# 3. Custom CSS
-st.markdown("""
-    <style>
-    .main-title { text-align: center; color: #007bff; font-size: 45px; margin-bottom: 0px; }
-    .subtitle { text-align: center; color: #555; font-size: 18px; margin-bottom: 30px; }
-    .wheel-container { display: flex; justify-content: center; align-items: center; height: 350px; position: relative; }
-    .wheel {
-        width: 250px; height: 250px; border-radius: 50%; border: 8px solid #FFD700;
-        position: relative; overflow: hidden;
-        background: conic-gradient(#FF4136 0% 20%, #0074D9 20% 40%, #2ECC40 40% 60%, #FFDC00 60% 80%, #B10DC9 80% 100%);
-        transition: transform 3s cubic-bezier(0.1, 0, 0, 1);
-        z-index: 1;
-    }
-    .wheel-pointer { position: absolute; top: 15px; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 40px solid #333; z-index: 10; }
-    .wheel-num { position: absolute; font-weight: bold; color: white; font-size: 26px; pointer-events: none; }
-    .footer { text-align: center; padding: 40px; color: #888; font-style: italic; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 4. Global Session State
+# 4. Global Session State Initialization
 if 'level' not in st.session_state: st.session_state.level = 1
 if 'score' not in st.session_state: st.session_state.score = 0
 if 'mode' not in st.session_state: st.session_state.mode = "spin"
@@ -93,7 +153,9 @@ if 'answered_ids' not in st.session_state: st.session_state.answered_ids = []
 if 'current_q_data' not in st.session_state: st.session_state.current_q_data = None
 if 'rotation' not in st.session_state: st.session_state.rotation = 0
 
+# --- Helper Function for the Wheel ---
 def render_wheel(rotation_angle):
+    # Centroid mapping: Labels are offset to be in the center of the slices
     wheel_html = f"""
         <div class="wheel-container">
             <div class="wheel-pointer"></div>
@@ -108,81 +170,64 @@ def render_wheel(rotation_angle):
     """
     return wheel_html
 
-# --- HEADER ---
-st.markdown('<h1 class="main-title">🧪 Periodic Table: The Grand Quest</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">MSc Chemistry Educational Assessment</p>', unsafe_allow_html=True)
+# --- MAIN CONTENT ---
+# Use a centered column for gameplay
+game_col1, game_col2, game_col3 = st.columns([1, 4, 1])
 
-with st.expander("📖 HOW TO PLAY"):
-    st.markdown("1. Spin the wheel to select a question. 2. Answer using A, B, C, or D. 3. Review facts after each level. 4. Progress through all 8 Chemical Gates.")
+with game_col2:
+    # --- HEADER SECTION ---
+    st.markdown('<h1 class="main-title">🧪 Periodic Table: The Grand Quest</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">An Interactive Educational Assessment Tool</p>', unsafe_allow_html=True)
 
-# --- NAVIGATION ---
-if st.session_state.mode == "spin":
-    st.markdown(f"### 📍 Level {st.session_state.level}: {st.session_state.levels_data[st.session_state.level]['name']}")
-    st.write(f"Completed: **{len(st.session_state.answered_ids)}/5** Questions")
-    
-    wheel_placeholder = st.empty()
-    wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
-    
-    if st.button("🚀 SPIN FOR A CHALLENGE", use_container_width=True):
-        available = [q for q in st.session_state.levels_data[st.session_state.level]["data"] if q["id"] not in st.session_state.answered_ids]
-        target_q = random.choice(available)
-        st.session_state.current_q_data = target_q
+    # --- INSTRUCTIONS ---
+    with st.expander("📖 HOW TO PLAY"):
+        st.markdown("""
+        <div class="instruction-box">
+        1. **Spin the Wheel:** Click the spin button to randomly select a challenge from the current Chemical Gate.
+        2. **Answer the Question:** Analyze the prompt and select the correct option (A, B, C, or D).
+        3. **Unlock gates:** Complete 5 correct analyses per level to progress.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # --- SCREEN 1: THE SPIN WHEEL ---
+    if st.session_state.mode == "spin":
+        st.write(f"### 📍 Current Gate: {st.session_state.levels_data[st.session_state.level]['name']}")
         
-        target_stop = -( (target_q['id'] - 1) * 72 + 36 )
-        st.session_state.rotation += 1440 + (target_stop - (st.session_state.rotation % 360))
+        # Calculate Progress
+        correct_count = len(st.session_state.answered_ids)
+        st.write(f"Progress: **{correct_count}/5** Questions Analysis Complete")
+        st.progress(correct_count / 5)
         
+        # The Wheel Graphic
+        wheel_placeholder = st.empty()
         wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
-        with st.status("Analyzing Atomic Data...") as status:
-            time.sleep(3)
-            status.update(label=f"🎯 Question {target_q['id']} Found!", state="complete")
-        st.session_state.mode = "quiz"
-        st.rerun()
-
-elif st.session_state.mode == "quiz":
-    q = st.session_state.current_q_data
-    st.subheader(f"🔍 Question {q['id']}")
-    st.info(f"**CHALLENGE:** {q['q']}")
-    ans = st.radio("Select an answer:", q["options"], index=None)
-
-    if st.button("SUBMIT DATA", use_container_width=True):
-        if ans == q["ans"]:
-            st.success("✅ Correct!")
-            st.session_state.score += 20
-        else:
-            st.error(f"❌ Incorrect. Answer: {q['ans']}")
         
-        st.session_state.answered_ids.append(q["id"])
-        time.sleep(2)
-        if len(st.session_state.answered_ids) < 5: st.session_state.mode = "spin"
-        else: st.session_state.mode = "review"
-        st.rerun()
+        if st.button("🚀 SPIN FOR A CHALLENGE", use_container_width=True):
+            available = [q for q in st.session_state.levels_data[st.session_state.level]["data"] if q["id"] not in st.session_state.answered_ids]
+            target_q = random.choice(available)
+            st.session_state.current_q_data = target_q
+            
+            target_stop = -( (target_q['id'] - 1) * 72 + 36 )
+            st.session_state.rotation += 1440 + (target_stop - (st.session_state.rotation % 360))
+            
+            wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
+            
+            with st.status("Analyzing Atomic Structures...") as status:
+                time.sleep(3)
+                status.update(label=f"🎯 Landed on Question {target_q['id']}!", state="complete")
+            
+            st.session_state.mode = "quiz"
+            st.rerun()
 
-elif st.session_state.mode == "review":
-    st.balloons()
-    st.header(f"🏁 Level {st.session_state.level} Complete!")
-    for item in st.session_state.levels_data[st.session_state.level]["data"]:
-        with st.expander(f"Question {item['id']} Review"):
-            st.write(item['q'])
-            st.success(f"Fact: {item['ans']}")
+    # --- SCREEN 2: THE SCIENTIFIC QUIZ ---
+    elif st.session_state.mode == "quiz":
+        q = st.session_state.current_q_data
+        st.subheader(f"🔍 Scientific Analysis: Question {q['id']}")
+        
+        st.info(f"**CHALLENGE:** {q['q']}")
+        
+        ans = st.radio("Select your scientific option:", q["options"], index=None)
 
-    if st.button("Unlock Next Level Gate" if st.session_state.level < 8 else "Final Results", use_container_width=True):
-        if st.session_state.level < 8:
-            st.session_state.level += 1
-            st.session_state.answered_ids = []
-            st.session_state.mode = "spin"
-        else: st.session_state.mode = "end"
-        st.rerun()
-
-elif st.session_state.mode == "end":
-    st.header("🏆 MASTER CHEMIST CERTIFIED")
-    st.metric("Total Score", f"{st.session_state.score} / 800")
-    if st.button("Restart New Session", use_container_width=True):
-        st.session_state.level = 1
-        st.session_state.score = 0
-        st.session_state.answered_ids = []
-        st.session_state.mode = "spin"
-        st.session_state.rotation = 0
-        st.rerun()
-
-st.markdown(f'<div class="footer">Game Developed by Ukazim Chidinma Favour</div>', unsafe_allow_html=True)
-                                                                                          
+    # --- FOOTER ---
+    st.markdown('<div class="footer">Game Developed by Ukazim Chidinma Favour</div>', unsafe_allow_html=True)
+    
