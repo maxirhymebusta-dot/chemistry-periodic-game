@@ -5,7 +5,7 @@ import time
 # 1. Page Configuration
 st.set_page_config(page_title="MSc Periodic Master", page_icon="🧪", layout="wide")
 
-# 2. Scientific Curriculum Data
+# 2. Advanced Curriculum Data
 if 'levels_data' not in st.session_state:
     st.session_state.levels_data = {
         1: {"name": "Period 1 & 2 Essentials", "data": [
@@ -24,106 +24,126 @@ if 'levels_data' not in st.session_state:
         ]}
     }
 
-# 3. Custom CSS for Animation
+# 3. Custom CSS for Visual Design and Dynamic Rotation
 st.markdown("""
     <style>
-    .wheel-container { display: flex; justify-content: center; align-items: center; height: 320px; position: relative; }
+    .wheel-container { display: flex; justify-content: center; align-items: center; height: 350px; position: relative; }
     .wheel {
         width: 250px; height: 250px; border-radius: 50%; border: 8px solid #FFD700;
         position: relative; overflow: hidden;
         background: conic-gradient(#FF4136 0% 20%, #0074D9 20% 40%, #2ECC40 40% 60%, #FFDC00 60% 80%, #B10DC9 80% 100%);
+        transition: transform 3s cubic-bezier(0.1, 0, 0, 1);
+        z-index: 1;
     }
     .wheel-pointer {
-        position: absolute; top: 15px; width: 0; height: 0; 
+        position: absolute; top: 25px; width: 0; height: 0; 
         border-left: 15px solid transparent; border-right: 15px solid transparent;
         border-top: 30px solid #333; z-index: 10;
     }
-    .spinning { animation: rotate-wheel 2s cubic-bezier(0.1, 0, 0, 1) forwards; }
-    @keyframes rotate-wheel { from { transform: rotate(0deg); } to { transform: rotate(1440deg); } }
-    .wheel-num { position: absolute; font-weight: bold; color: white; font-size: 22px; }
+    .wheel-num { position: absolute; font-weight: bold; color: white; font-size: 24px; pointer-events: none; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. Session State
+# 4. Global Session State Initialization
 if 'level' not in st.session_state: st.session_state.level = 1
 if 'score' not in st.session_state: st.session_state.score = 0
 if 'mode' not in st.session_state: st.session_state.mode = "spin"
 if 'answered_ids' not in st.session_state: st.session_state.answered_ids = []
 if 'current_q_data' not in st.session_state: st.session_state.current_q_data = None
+if 'rotation' not in st.session_state: st.session_state.rotation = 0
+
+# --- Helper Function to Render the Wheel ---
+def render_wheel(rotation_angle):
+    wheel_html = f"""
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" style="transform: rotate({rotation_angle}deg);">
+                <div class="wheel-num" style="top:10%; left:45%;">1</div>
+                <div class="wheel-num" style="top:40%; left:75%;">2</div>
+                <div class="wheel-num" style="top:75%; left:45%;">3</div>
+                <div class="wheel-num" style="top:40%; left:15%;">4</div>
+                <div class="wheel-num" style="top:10%; left:15%;">5</div>
+            </div>
+        </div>
+    """
+    return wheel_html
 
 # --- SCREEN 1: THE SPIN WHEEL ---
 if st.session_state.mode == "spin":
     st.header(f"Level {st.session_state.level}: {st.session_state.levels_data[st.session_state.level]['name']}")
-    st.write(f"Questions answered: {len(st.session_state.answered_ids)}/5")
+    st.write(f"Questions completed: **{len(st.session_state.answered_ids)}/5**")
     
     wheel_placeholder = st.empty()
-    wheel_html = """
-        <div class="wheel-container">
-            <div class="wheel-pointer"></div>
-            <div class="wheel {CLASS}">
-                <div class="wheel-num" style="top:15%; left:45%;">1</div>
-                <div class="wheel-num" style="top:40%; left:75%;">2</div>
-                <div class="wheel-num" style="top:75%; left:45%;">3</div>
-                <div class="wheel-num" style="top:40%; left:15%;">4</div>
-                <div class="wheel-num" style="top:15%; left:15%;">5</div>
-            </div>
-        </div>
-    """
-    wheel_placeholder.markdown(wheel_html.format(CLASS=""), unsafe_allow_html=True)
+    wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
     
-    if st.button("🚀 SPIN FOR A QUESTION", use_container_width=True):
-        # Logic to pick a random UNANSWERED question
-        available_questions = [q for q in st.session_state.levels_data[st.session_state.level]["data"] 
-                               if q["id"] not in st.session_state.answered_ids]
+    if st.button("🚀 SPIN THE CHEMICAL WHEEL", use_container_width=True):
+        # 1. Pick a random unanswered question
+        available = [q for q in st.session_state.levels_data[st.session_state.level]["data"] 
+                     if q["id"] not in st.session_state.answered_ids]
         
-        selected_q = random.choice(available_questions)
-        st.session_state.current_q_data = selected_q
+        target_q = random.choice(available)
+        st.session_state.current_q_data = target_q
         
-        # Animation
-        wheel_placeholder.markdown(wheel_html.format(CLASS="spinning"), unsafe_allow_html=True)
-        with st.status("Spinning...") as status:
-            time.sleep(2.2)
-            status.update(label=f"Landed on Question {selected_q['id']}!", state="complete")
+        # 2. Logic: Calculate Rotation Angle
+        # Each segment is 72 degrees. We add 1440 (4 full spins) for effect.
+        # We subtract the degrees because the pointer is at the TOP.
+        offsets = {1: 0, 2: -72, 3: -144, 4: -216, 5: -288}
+        st.session_state.rotation += 1440 + offsets[target_q['id']]
+        
+        # 3. Show Animation
+        wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
+        
+        with st.status("Spinning for Atomic Data...") as status:
+            time.sleep(3.2)
+            status.update(label=f"🎯 Success! Landed on Question {target_q['id']}", state="complete")
         
         st.session_state.mode = "quiz"
         st.rerun()
 
-# --- SCREEN 2: THE QUIZ ---
+# --- SCREEN 2: THE SCIENTIFIC QUIZ ---
 elif st.session_state.mode == "quiz":
     q = st.session_state.current_q_data
-    st.subheader(f"Level {st.session_state.level} | Question {q['id']}")
-    st.info(q["q"])
+    st.subheader(f"📍 Question {q['id']}")
     
-    ans = st.radio("Choose your answer:", q["options"], index=None)
+    st.info(f"**CHALLENGE:** {q['q']}")
+    
+    ans = st.radio("Select the correct scientific option:", q["options"], index=None)
 
-    if st.button("Submit Answer"):
+    if st.button("SUBMIT RESEARCH DATA", use_container_width=True):
         if ans == q["ans"]:
-            st.success("✅ Correct!")
+            st.success("✅ Excellent! Correct answer.")
             st.session_state.score += 20
         else:
-            st.error(f"❌ Wrong! It was {q['ans']}")
+            st.error(f"❌ Incorrect. The correct answer was {q['ans']}")
         
         st.session_state.answered_ids.append(q["id"])
-        time.sleep(1.5)
+        time.sleep(2)
         
+        # Check if level is finished
         if len(st.session_state.answered_ids) < 5:
             st.session_state.mode = "spin"
         else:
             st.session_state.mode = "review"
         st.rerun()
 
-# --- SCREEN 3: LEVEL REVIEW ---
+# --- SCREEN 3: LEVEL REVIEW (Curriculum Feedback) ---
 elif st.session_state.mode == "review":
     st.balloons()
     st.header(f"🏁 Level {st.session_state.level} Complete!")
-    st.subheader("Review the Correct Answers:")
+    st.write("### Scientific Review Session")
+    st.write("Review these facts to improve your chemistry proficiency:")
     
-    for item in st.session_state.levels_data[st.session_state.level]["data"]:
-        with st.expander(f"Question {item['id']}"):
-            st.write(item['q'])
-            st.success(f"Answer: {item['ans']}")
+    review_list = st.session_state.levels_data[st.session_state.level]["data"]
+    for item in review_list:
+        with st.expander(f"Question {item['id']} Analysis"):
+            st.markdown(f"**The Question:** {item['q']}")
+            st.success(f"**The Correct Fact:** {item['ans']}")
 
-    if st.button("Next Level Gate" if st.session_state.level < 2 else "Final Results"):
+    st.write("---")
+    st.subheader(f"Current Total Score: {st.session_state.score}")
+    
+    next_btn_text = "Unlock Next Level Gate" if st.session_state.level < 2 else "Final Evaluation"
+    if st.button(next_btn_text, use_container_width=True):
         if st.session_state.level < 2:
             st.session_state.level += 1
             st.session_state.answered_ids = []
@@ -132,14 +152,17 @@ elif st.session_state.mode == "review":
             st.session_state.mode = "end"
         st.rerun()
 
-# --- SCREEN 4: END ---
+# --- SCREEN 4: FINAL CERTIFICATION ---
 elif st.session_state.mode == "end":
-    st.header("🏆 Master Chemist Certified")
-    st.metric("Final Score", f"{st.session_state.score} / 200")
-    if st.button("Restart"):
+    st.header("🏆 MASTER CHEMIST CERTIFIED")
+    st.write("You have successfully completed the MSc Periodic Table Quest.")
+    st.metric("Final Proficiency Score", f"{st.session_state.score} / 200")
+    
+    if st.button("Restart New Research Project", use_container_width=True):
         st.session_state.level = 1
         st.session_state.score = 0
         st.session_state.answered_ids = []
         st.session_state.mode = "spin"
+        st.session_state.rotation = 0
         st.rerun()
-            
+                     
