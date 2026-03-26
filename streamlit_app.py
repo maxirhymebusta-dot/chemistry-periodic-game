@@ -36,11 +36,11 @@ st.markdown("""
         z-index: 1;
     }
     .wheel-pointer {
-        position: absolute; top: 25px; width: 0; height: 0; 
+        position: absolute; top: 15px; width: 0; height: 0; 
         border-left: 15px solid transparent; border-right: 15px solid transparent;
-        border-top: 30px solid #333; z-index: 10;
+        border-top: 40px solid #333; z-index: 10;
     }
-    .wheel-num { position: absolute; font-weight: bold; color: white; font-size: 24px; pointer-events: none; }
+    .wheel-num { position: absolute; font-weight: bold; color: white; font-size: 26px; pointer-events: none; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -54,15 +54,16 @@ if 'rotation' not in st.session_state: st.session_state.rotation = 0
 
 # --- Helper Function to Render the Wheel ---
 def render_wheel(rotation_angle):
+    # Centroid mapping: Labels are offset to be in the center of the slices
     wheel_html = f"""
         <div class="wheel-container">
             <div class="wheel-pointer"></div>
             <div class="wheel" style="transform: rotate({rotation_angle}deg);">
-                <div class="wheel-num" style="top:10%; left:45%;">1</div>
-                <div class="wheel-num" style="top:40%; left:75%;">2</div>
-                <div class="wheel-num" style="top:75%; left:45%;">3</div>
-                <div class="wheel-num" style="top:40%; left:15%;">4</div>
-                <div class="wheel-num" style="top:10%; left:15%;">5</div>
+                <div class="wheel-num" style="top:12%; left:55%; transform: rotate(36deg);">1</div>
+                <div class="wheel-num" style="top:48%; left:75%; transform: rotate(108deg);">2</div>
+                <div class="wheel-num" style="top:78%; left:40%; transform: rotate(180deg);">3</div>
+                <div class="wheel-num" style="top:48%; left:10%; transform: rotate(252deg);">4</div>
+                <div class="wheel-num" style="top:12%; left:25%; transform: rotate(324deg);">5</div>
             </div>
         </div>
     """
@@ -71,12 +72,12 @@ def render_wheel(rotation_angle):
 # --- SCREEN 1: THE SPIN WHEEL ---
 if st.session_state.mode == "spin":
     st.header(f"Level {st.session_state.level}: {st.session_state.levels_data[st.session_state.level]['name']}")
-    st.write(f"Questions completed: **{len(st.session_state.answered_ids)}/5**")
+    st.write(f"Progress: **{len(st.session_state.answered_ids)}/5**")
     
     wheel_placeholder = st.empty()
     wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
     
-    if st.button("🚀 SPIN THE CHEMICAL WHEEL", use_container_width=True):
+    if st.button("🚀 SPIN THE WHEEL", use_container_width=True):
         # 1. Pick a random unanswered question
         available = [q for q in st.session_state.levels_data[st.session_state.level]["data"] 
                      if q["id"] not in st.session_state.answered_ids]
@@ -84,18 +85,18 @@ if st.session_state.mode == "spin":
         target_q = random.choice(available)
         st.session_state.current_q_data = target_q
         
-        # 2. Logic: Calculate Rotation Angle
-        # Each segment is 72 degrees. We add 1440 (4 full spins) for effect.
-        # We subtract the degrees because the pointer is at the TOP.
-        offsets = {1: 0, 2: -72, 3: -144, 4: -216, 5: -288}
-        st.session_state.rotation += 1440 + offsets[target_q['id']]
+        # 2. Logic: Perfect Landing Math
+        # Each slice is 72 deg. Centroid is at 36 deg.
+        # Calculation: -( (ID-1) * 72 + 36 )
+        target_stop = -( (target_q['id'] - 1) * 72 + 36 )
+        st.session_state.rotation += 1440 + (target_stop - (st.session_state.rotation % 360))
         
         # 3. Show Animation
         wheel_placeholder.markdown(render_wheel(st.session_state.rotation), unsafe_allow_html=True)
         
-        with st.status("Spinning for Atomic Data...") as status:
+        with st.status("Spinning...") as status:
             time.sleep(3.2)
-            status.update(label=f"🎯 Success! Landed on Question {target_q['id']}", state="complete")
+            status.update(label=f"🎯 Landed on Question {target_q['id']}!", state="complete")
         
         st.session_state.mode = "quiz"
         st.rerun()
@@ -103,15 +104,14 @@ if st.session_state.mode == "spin":
 # --- SCREEN 2: THE SCIENTIFIC QUIZ ---
 elif st.session_state.mode == "quiz":
     q = st.session_state.current_q_data
-    st.subheader(f"📍 Question {q['id']}")
-    
+    st.subheader(f"📍 Analysis: Question {q['id']}")
     st.info(f"**CHALLENGE:** {q['q']}")
     
     ans = st.radio("Select the correct scientific option:", q["options"], index=None)
 
-    if st.button("SUBMIT RESEARCH DATA", use_container_width=True):
+    if st.button("SUBMIT DATA", use_container_width=True):
         if ans == q["ans"]:
-            st.success("✅ Excellent! Correct answer.")
+            st.success("✅ Correct! Excellent understanding.")
             st.session_state.score += 20
         else:
             st.error(f"❌ Incorrect. The correct answer was {q['ans']}")
@@ -119,31 +119,27 @@ elif st.session_state.mode == "quiz":
         st.session_state.answered_ids.append(q["id"])
         time.sleep(2)
         
-        # Check if level is finished
         if len(st.session_state.answered_ids) < 5:
             st.session_state.mode = "spin"
         else:
             st.session_state.mode = "review"
         st.rerun()
 
-# --- SCREEN 3: LEVEL REVIEW (Curriculum Feedback) ---
+# --- SCREEN 3: LEVEL REVIEW ---
 elif st.session_state.mode == "review":
     st.balloons()
     st.header(f"🏁 Level {st.session_state.level} Complete!")
     st.write("### Scientific Review Session")
-    st.write("Review these facts to improve your chemistry proficiency:")
     
     review_list = st.session_state.levels_data[st.session_state.level]["data"]
     for item in review_list:
         with st.expander(f"Question {item['id']} Analysis"):
-            st.markdown(f"**The Question:** {item['q']}")
-            st.success(f"**The Correct Fact:** {item['ans']}")
-
-    st.write("---")
-    st.subheader(f"Current Total Score: {st.session_state.score}")
+            st.markdown(f"**Question:** {item['q']}")
+            st.success(f"**Correct Fact:** {item['ans']}")
     
-    next_btn_text = "Unlock Next Level Gate" if st.session_state.level < 2 else "Final Evaluation"
-    if st.button(next_btn_text, use_container_width=True):
+    st.write(f"### Score: {st.session_state.score}")
+    
+    if st.button("Proceed to Next Gate" if st.session_state.level < 2 else "Final Evaluation", use_container_width=True):
         if st.session_state.level < 2:
             st.session_state.level += 1
             st.session_state.answered_ids = []
@@ -155,14 +151,12 @@ elif st.session_state.mode == "review":
 # --- SCREEN 4: FINAL CERTIFICATION ---
 elif st.session_state.mode == "end":
     st.header("🏆 MASTER CHEMIST CERTIFIED")
-    st.write("You have successfully completed the MSc Periodic Table Quest.")
     st.metric("Final Proficiency Score", f"{st.session_state.score} / 200")
-    
-    if st.button("Restart New Research Project", use_container_width=True):
+    if st.button("Restart New Session", use_container_width=True):
         st.session_state.level = 1
         st.session_state.score = 0
         st.session_state.answered_ids = []
         st.session_state.mode = "spin"
         st.session_state.rotation = 0
         st.rerun()
-                     
+    
