@@ -3,9 +3,10 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest: Survival", layout="centered")
+st.set_page_config(page_title="Atomic Quest: Elite", layout="centered")
 
 # 2. Comprehensive Element Database
+# Data: (Atomic No, Mass No, Group, Period, Overview)
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
     "BORON": (5, 11, 13, 2, "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
@@ -23,11 +24,11 @@ ELEMENTS_DB = {
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
 
-# --- GAME STATE MANAGEMENT ---
+# --- GAME STATE ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 
-# Check for Life Loss signal from JavaScript
+# Life Loss Logic
 params = st.query_params
 if params.get("lose_life") == "true":
     st.session_state.lives -= 1
@@ -35,12 +36,12 @@ if params.get("lose_life") == "true":
     if st.session_state.lives <= 0:
         st.session_state.lvl = 0
         st.session_state.lives = 3
-        st.error("💀 GAME OVER! Returning to Level 1...")
+        st.error("💀 ALL LIVES LOST! Restarting from Level 1...")
     st.rerun()
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE
+# 3. THE QUEST ENGINE (15s TIMER)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -55,21 +56,15 @@ game_html = f"""
             width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 2px solid #f39c12; position: relative;
         }}
-        .stats-bar {{
-            display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;
-            font-weight: bold; font-size: 14px;
-        }}
-        .timer-text {{ color: #e74c3c; }}
+        .stats-bar {{ display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px; font-weight: bold; font-size: 14px; }}
+        #timer {{ color: #ff4757; font-family: monospace; font-size: 18px; }}
         .lives-text {{ color: #ff4757; }}
-        
-        .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 42px; }}
+        .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 40px; }}
         .tile {{
             width: 38px; height: 38px; background: #f39c12; color: #fff; border-radius: 5px;
             display: flex; align-items: center; justify-content: center; font-weight: 900;
             font-size: 14px; box-shadow: 0 4px 0 #d35400; cursor: pointer;
         }}
-        
-        /* VANISHING POPUP AT THE TOP */
         #msg-overlay {{
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
@@ -78,8 +73,6 @@ game_html = f"""
         .msg-correct {{ background: #f1c40f; color: #000; }}
         .msg-wrong {{ background: #e74c3c; color: white; }}
         .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
-        
-        .music-btn {{ background: rgba(0,0,0,0.5); border: 1px solid #f39c12; color: #f39c12; border-radius: 20px; padding: 5px 15px; font-size: 11px; cursor: pointer; }}
     </style>
 </head>
 <body>
@@ -87,26 +80,23 @@ game_html = f"""
     <div id="msg-overlay"></div>
     <div class="stats-bar">
         <span class="lives-text">❤️ × {st.session_state.lives}</span>
-        <span class="timer-text" id="timer">01:00</span>
+        <span id="timer">15</span>
     </div>
     <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
     
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
-    
-    <button class="music-btn" onclick="toggleMusic()">⚔️ THEME SONG</button>
 </div>
 
 <script>
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
-    let timeLeft = 60;
+    let timeLeft = 15;
     let timerActive = true;
     
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let musicInterval = null;
 
     function playSound(freq, type, dur, vol=0.1) {{
         if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -118,33 +108,18 @@ game_html = f"""
         osc.start(); osc.stop(audioCtx.currentTime + dur);
     }}
 
-    // Countdown Logic
     const timerInterval = setInterval(() => {{
         if(!timerActive) return;
         timeLeft--;
-        let mins = Math.floor(timeLeft / 60);
-        let secs = timeLeft % 60;
-        document.getElementById('timer').innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+        document.getElementById('timer').innerText = timeLeft;
+        if(timeLeft <= 5) playSound(400, 'sine', 0.1, 0.05);
         
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            // Signal to Streamlit to reduce life
             window.parent.location.href = window.parent.location.pathname + "?lose_life=true";
         }}
     }}, 1000);
-
-    function toggleMusic() {{
-        if(!musicInterval) {{
-            musicInterval = setInterval(() => {{
-                playSound(82, 'triangle', 0.5, 0.15);
-                setTimeout(() => {{ playSound(110, 'triangle', 0.3, 0.1); }}, 250);
-                setTimeout(() => {{ playSound(123, 'triangle', 0.3, 0.1); }}, 500);
-            }}, 1000);
-        }} else {{
-            clearInterval(musicInterval); musicInterval = null;
-        }}
-    }}
 
     function render() {{
         const ansRow = document.getElementById('ans-row');
@@ -172,7 +147,6 @@ game_html = f"""
                 msg.innerText = "STABILIZED! 🏆";
                 msg.className = "msg-correct show-msg";
                 playSound(523, 'sine', 0.4, 0.1);
-                // Vanishes quickly
                 setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 1000);
             }} else {{
                 msg.innerText = "ERROR! 💀";
@@ -194,15 +168,31 @@ game_html = f"""
 """
 
 # 4. Render Game
-components.html(game_html, height=290)
+components.html(game_html, height=260)
 
-# 5. DATA SHEET & PROGRESSION
-st.markdown("<div style='margin-top: -10px;'>", unsafe_allow_html=True)
-verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to stabilize level...", label_visibility="collapsed")
+# 5. DETAILED DATA SHEET
+st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
+verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type name to reveal knowledge...", label_visibility="collapsed")
 
 if verify_text.upper() == target_word:
     data = ELEMENTS_DB[target_word]
-    st.info(f"**DATA SHEET:** {target_word} (Z: {data[0]}, A: {data[1]}) | Group {data[2]}, Period {data[3]}. {data[4]}")
+    st.markdown(f"""
+    <div style="background: #fff; padding: 15px; border-radius: 12px; border: 2px solid #f39c12; color: #222; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <h3 style="color: #2c3e50; margin: 0 0 10px 0; text-align: center; border-bottom: 2px solid #f39c12;">🛡️ {target_word} SCIENTIFIC DATA</h3>
+        
+        <p style="font-size: 14px; margin: 5px 0;"><b>Atomic Number ($Z$): {data[0]}</b><br>
+        <span style="font-size: 12px; color: #666;">This represents the number of protons in the nucleus. It defines the element's identity.</span></p>
+        
+        <p style="font-size: 14px; margin: 5px 0;"><b>Mass Number ($A$): {data[1]}</b><br>
+        <span style="font-size: 12px; color: #666;">The total sum of protons and neutrons. It determines the weight of the atom.</span></p>
+        
+        <p style="font-size: 14px; margin: 5px 0;"><b>Group: {data[2]} | Period: {data[3]}</b><br>
+        <span style="font-size: 12px; color: #666;">Group {data[2]} indicates chemical behavior; Period {data[3]} shows the number of electron shells.</span></p>
+        
+        <p style="font-size: 13px; color: #1a2a6c; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;"><b>Scientific Lore:</b> {data[4]}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
         st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
         st.rerun()
@@ -210,13 +200,17 @@ else:
     st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 6. SURVIVAL GUIDE
+# 6. HOW TO PLAY (QUEST MANUAL)
+st.markdown("---")
 st.markdown("""
-<div style="background: #2c3e50; padding: 15px; border-radius: 12px; border: 2px solid #e74c3c; color: white; margin-top: 10px;">
-    <h4 style="margin:0; color: #ff4757; font-size: 16px;">❤️ Lifespan Rules:</h4>
-    <p style="font-size: 13px; margin: 5px 0;">• You have <b>3 Lives</b>. If the timer hits zero, you lose one life.<br>
-    • If you lose all lives, the Quest resets to <b>Level 1</b>.</p>
-</div>
-""", unsafe_allow_html=True)
+### 📖 How to Play (Quest Manual)
+
+1. **Unscramble:** Tap the gold letters in your **Inventory** to fill the empty slots within **15 seconds**.
+2. **Modify:** Tap a letter in the top slots if you need to send it back to the pool.
+3. **The Penalty:** If the timer hits **0**, you lose **1 Heart (❤️)**. Lose all 3, and you fall back to Level 1.
+4. **Knowledge Lock:** Once you see "STABILIZED," type the element's name into the **Scroll of Truth** below.
+5. **Learn:** Read the **Scientific Data** that appears to understand the element's Atomic Structure ($Z$ and $A$), position, and real-world use.
+6. **Advance:** Click "Advance" to move to the next stage of your quest!
+""")
 
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
