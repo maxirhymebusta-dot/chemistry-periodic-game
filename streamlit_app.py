@@ -32,7 +32,7 @@ if 'game_over' not in st.session_state: st.session_state.game_over = False
 st.markdown("""
     <style>
     /* Targeting the button by its text content and hiding the entire container */
-    div[data-testid="stButton"] button:has(div:contains("INTERNAL_REDUCE")) {
+    div[data-testid="stButton"] button:has(div:contains("💣")) {
         display: none !important;
         visibility: hidden !important;
         position: absolute !important;
@@ -41,7 +41,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-if st.button("INTERNAL_REDUCE"):
+if st.button("💣"):
     st.session_state.lives -= 1
     if st.session_state.lives <= 0:
         st.session_state.game_over = True
