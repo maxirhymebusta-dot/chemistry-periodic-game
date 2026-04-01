@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest", layout="centered")
+st.set_page_config(page_title="Atomic Quest: Survival", layout="centered")
 
 # 2. Comprehensive Element Database
 ELEMENTS_DB = {
@@ -22,10 +22,25 @@ ELEMENTS_DB = {
 }
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
+
+# --- GAME STATE MANAGEMENT ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
+if 'lives' not in st.session_state: st.session_state.lives = 3
+
+# Check for Life Loss signal from JavaScript
+params = st.query_params
+if params.get("lose_life") == "true":
+    st.session_state.lives -= 1
+    st.query_params.clear()
+    if st.session_state.lives <= 0:
+        st.session_state.lvl = 0
+        st.session_state.lives = 3
+        st.error("💀 GAME OVER! Returning to Level 1...")
+    st.rerun()
+
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE (WITH 1-MINUTE TIMER & LOUDER AUDIO)
+# 3. THE QUEST ENGINE
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -40,39 +55,47 @@ game_html = f"""
             width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 2px solid #f39c12; position: relative;
         }}
-        .timer-box {{
-            position: absolute; top: 10px; right: 15px; background: rgba(231, 76, 60, 0.2);
-            border: 1px solid #e74c3c; padding: 2px 8px; border-radius: 10px; font-weight: bold; color: #e74c3c;
+        .stats-bar {{
+            display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;
+            font-weight: bold; font-size: 14px;
         }}
+        .timer-text {{ color: #e74c3c; }}
+        .lives-text {{ color: #ff4757; }}
+        
         .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 42px; }}
         .tile {{
             width: 38px; height: 38px; background: #f39c12; color: #fff; border-radius: 5px;
             display: flex; align-items: center; justify-content: center; font-weight: 900;
-            font-size: 14px; box-shadow: 0 4px 0 #d35400; cursor: pointer; user-select: none;
+            font-size: 14px; box-shadow: 0 4px 0 #d35400; cursor: pointer;
         }}
+        
+        /* VANISHING POPUP AT THE TOP */
         #msg-overlay {{
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            padding: 15px 25px; border-radius: 15px; font-weight: bold; font-size: 22px; z-index: 100;
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
+            padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }}
-        .msg-correct {{ background: #f1c40f; color: #000; box-shadow: 0 0 20px #f1c40f; }}
-        .msg-wrong {{ background: #e74c3c; color: white; box-shadow: 0 0 20px #e74c3c; }}
-        .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
-        .music-btn {{ background: rgba(0,0,0,0.5); border: 1px solid #f39c12; color: #f39c12; border-radius: 20px; padding: 5px 15px; font-size: 11px; font-weight:bold; cursor: pointer; margin-top: 5px; }}
+        .msg-correct {{ background: #f1c40f; color: #000; }}
+        .msg-wrong {{ background: #e74c3c; color: white; }}
+        .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
+        
+        .music-btn {{ background: rgba(0,0,0,0.5); border: 1px solid #f39c12; color: #f39c12; border-radius: 20px; padding: 5px 15px; font-size: 11px; cursor: pointer; }}
     </style>
 </head>
 <body>
 <div class="game-card" id="card">
     <div id="msg-overlay"></div>
-    <div class="timer-box" id="timer">01:00</div>
+    <div class="stats-bar">
+        <span class="lives-text">❤️ × {st.session_state.lives}</span>
+        <span class="timer-text" id="timer">01:00</span>
+    </div>
     <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
-    <p style="font-size:10px; opacity:0.8; margin:2px 0;">Stage {st.session_state.lvl + 1}</p>
     
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
     
-    <button class="music-btn" id="musicToggle" onclick="toggleMusic()">⚔️ THEME: OFF</button>
+    <button class="music-btn" onclick="toggleMusic()">⚔️ THEME SONG</button>
 </div>
 
 <script>
@@ -95,61 +118,31 @@ game_html = f"""
         osc.start(); osc.stop(audioCtx.currentTime + dur);
     }}
 
-    function playApplause() {{
-        for (let i = 0; i < 20; i++) {{
-            const t = audioCtx.currentTime + (Math.random() * 0.5);
-            const bufferSize = audioCtx.sampleRate * 0.2;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let j = 0; j < bufferSize; j++) {{ data[j] = Math.random() * 2 - 1; }}
-            const source = audioCtx.createBufferSource();
-            const filter = audioCtx.createBiquadFilter();
-            const gain = audioCtx.createGain();
-            source.buffer = buffer;
-            filter.type = 'bandpass'; filter.frequency.value = 1000 + (Math.random() * 2000);
-            gain.gain.setValueAtTime(0.08, t); // Increased volume
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-            source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-            source.start(t);
-        }}
-    }}
-
-    // 1-Minute Timer Logic
-    const timerElement = document.getElementById('timer');
+    // Countdown Logic
     const timerInterval = setInterval(() => {{
         if(!timerActive) return;
         timeLeft--;
         let mins = Math.floor(timeLeft / 60);
         let secs = timeLeft % 60;
-        timerElement.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
-        
-        if(timeLeft <= 10) {{ timerElement.style.color = "#ff4b2b"; }}
+        document.getElementById('timer').innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
         
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            const msg = document.getElementById('msg-overlay');
-            msg.innerText = "TIME EXPIRED! ⏳";
-            msg.className = "msg-wrong show-msg";
-            playSound(100, 'sawtooth', 1.0, 0.2);
-            setTimeout(() => {{ window.location.reload(); }}, 2000);
+            // Signal to Streamlit to reduce life
+            window.parent.location.href = window.parent.location.pathname + "?lose_life=true";
         }}
     }}, 1000);
 
     function toggleMusic() {{
-        const btn = document.getElementById('musicToggle');
         if(!musicInterval) {{
-            btn.innerText = "⚔️ THEME: ON";
             musicInterval = setInterval(() => {{
-                const t = audioCtx.currentTime;
-                // Louder Bass march
-                playSound(82, 'triangle', 0.5, 0.15); // Vol 0.04 -> 0.15
+                playSound(82, 'triangle', 0.5, 0.15);
                 setTimeout(() => {{ playSound(110, 'triangle', 0.3, 0.1); }}, 250);
                 setTimeout(() => {{ playSound(123, 'triangle', 0.3, 0.1); }}, 500);
             }}, 1000);
         }} else {{
             clearInterval(musicInterval); musicInterval = null;
-            btn.innerText = "⚔️ THEME: OFF";
         }}
     }}
 
@@ -160,15 +153,15 @@ game_html = f"""
         
         for(let i=0; i<target.length; i++) {{
             let div = document.createElement('div'); div.className = 'tile';
-            if(!answer[i]) {{ div.style.background = "rgba(255,255,255,0.05)"; }}
+            if(!answer[i]) div.style.background = "rgba(255,255,255,0.05)";
             div.innerText = answer[i] || "?";
-            if(answer[i] && timerActive) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); removeLetter(i); }}; }}
+            if(answer[i] && timerActive) div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); removeLetter(i); }};
             ansRow.appendChild(div);
         }}
         
         pool.forEach((char, i) => {{
             let div = document.createElement('div'); div.className = 'tile'; div.innerText = char;
-            if(timerActive) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); addLetter(i); }}; }}
+            if(timerActive) div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); addLetter(i); }};
             poolRow.appendChild(div);
         }});
 
@@ -176,17 +169,19 @@ game_html = f"""
             const msg = document.getElementById('msg-overlay');
             if(answer.join('') === target) {{
                 timerActive = false;
-                msg.innerText = "QUEST COMPLETE! 🏆";
+                msg.innerText = "STABILIZED! 🏆";
                 msg.className = "msg-correct show-msg";
-                playApplause();
+                playSound(523, 'sine', 0.4, 0.1);
+                // Vanishes quickly
+                setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 1000);
             }} else {{
-                msg.innerText = "TRY AGAIN! 💀";
+                msg.innerText = "ERROR! 💀";
                 msg.className = "msg-wrong show-msg";
                 playSound(150, 'sawtooth', 0.3, 0.1);
                 setTimeout(() => {{ 
                     msg.classList.remove('show-msg'); 
                     answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render();
-                }}, 1000);
+                }}, 800);
             }}
         }}
     }}
@@ -199,41 +194,28 @@ game_html = f"""
 """
 
 # 4. Render Game
-components.html(game_html, height=300)
+components.html(game_html, height=290)
 
-# 5. DATA SHEET & VERIFICATION
+# 5. DATA SHEET & PROGRESSION
 st.markdown("<div style='margin-top: -10px;'>", unsafe_allow_html=True)
-verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter element name to claim your reward...", label_visibility="collapsed")
+verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to stabilize level...", label_visibility="collapsed")
 
 if verify_text.upper() == target_word:
     data = ELEMENTS_DB[target_word]
-    st.markdown(f"""
-    <div style="background: #fff; padding: 15px; border-radius: 10px; border: 2px solid #f39c12; margin-bottom: 10px; color: #222;">
-        <h4 style="color: #2c3e50; margin-top:0;">🛡️ {target_word} KNOWLEDGE SCROLL</h4>
-        <p style="font-size: 14px; margin: 5px 0;"><b>Atomic No:</b> {data[0]} | <b>Mass No:</b> {data[1]}</p>
-        <p style="font-size: 14px; margin: 5px 0;"><b>Group:</b> {data[2]} | <b>Period:</b> {data[3]}</p>
-        <p style="font-size: 13px; color: #555; border-top: 1px solid #eee; padding-top: 5px;"><b>Lore:</b> {data[4]}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.info(f"**DATA SHEET:** {target_word} (Z: {data[0]}, A: {data[1]}) | Group {data[2]}, Period {data[3]}. {data[4]}")
     if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
         st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
         st.rerun()
 else:
-    st.button("🔒 PATH BLOCKED (Solve Scramble First)", disabled=True, use_container_width=True)
+    st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 6. ENHANCED HOW TO PLAY
-st.markdown("---")
+# 6. SURVIVAL GUIDE
 st.markdown("""
-<div style="background: #2c3e50; padding: 15px; border-radius: 15px; border-left: 6px solid #f39c12; color: white;">
-    <h3 style="margin-top:0; color: #f39c12; font-size: 18px;">⌛ The Timed Quest</h3>
-    <ul style="font-size: 13px; padding-left: 20px; line-height: 1.4;">
-        <li><b>The Clock:</b> You have 60 seconds to assemble the element.</li>
-        <li><b>Loud Audio:</b> Ensure your volume is up to hear the Quest March!</li>
-        <li><b>Victory:</b> Correct spelling stops the timer and triggers the <b>Applause</b>.</li>
-        <li><b>Failure:</b> If the timer hits zero, the level resets!</li>
-    </ul>
+<div style="background: #2c3e50; padding: 15px; border-radius: 12px; border: 2px solid #e74c3c; color: white; margin-top: 10px;">
+    <h4 style="margin:0; color: #ff4757; font-size: 16px;">❤️ Lifespan Rules:</h4>
+    <p style="font-size: 13px; margin: 5px 0;">• You have <b>3 Lives</b>. If the timer hits zero, you lose one life.<br>
+    • If you lose all lives, the Quest resets to <b>Level 1</b>.</p>
 </div>
 """, unsafe_allow_html=True)
 
