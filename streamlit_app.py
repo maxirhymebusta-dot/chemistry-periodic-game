@@ -25,7 +25,7 @@ ELEMENT_LIST = list(ELEMENTS_DB.keys())
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE
+# 3. THE QUEST ENGINE (WITH 1-MINUTE TIMER & LOUDER AUDIO)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -40,40 +40,48 @@ game_html = f"""
             width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 2px solid #f39c12; position: relative;
         }}
+        .timer-box {{
+            position: absolute; top: 10px; right: 15px; background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c; padding: 2px 8px; border-radius: 10px; font-weight: bold; color: #e74c3c;
+        }}
         .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 42px; }}
         .tile {{
-            width: 40px; height: 40px; background: #f39c12; color: #fff; border-radius: 5px;
+            width: 38px; height: 38px; background: #f39c12; color: #fff; border-radius: 5px;
             display: flex; align-items: center; justify-content: center; font-weight: 900;
-            font-size: 16px; box-shadow: 0 4px 0 #d35400; cursor: pointer; user-select: none;
+            font-size: 14px; box-shadow: 0 4px 0 #d35400; cursor: pointer; user-select: none;
         }}
         #msg-overlay {{
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
-            padding: 8px 20px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            padding: 15px 25px; border-radius: 15px; font-weight: bold; font-size: 22px; z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }}
-        .msg-correct {{ background: #f1c40f; color: #000; box-shadow: 0 0 15px #f1c40f; }}
-        .msg-wrong {{ background: #e74c3c; color: white; box-shadow: 0 0 15px #e74c3c; }}
-        .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
-        .shake {{ animation: shake 0.3s ease-in-out; }}
-        @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-8px);}} 75% {{transform: translateX(8px);}} }}
+        .msg-correct {{ background: #f1c40f; color: #000; box-shadow: 0 0 20px #f1c40f; }}
+        .msg-wrong {{ background: #e74c3c; color: white; box-shadow: 0 0 20px #e74c3c; }}
+        .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
         .music-btn {{ background: rgba(0,0,0,0.5); border: 1px solid #f39c12; color: #f39c12; border-radius: 20px; padding: 5px 15px; font-size: 11px; font-weight:bold; cursor: pointer; margin-top: 5px; }}
     </style>
 </head>
 <body>
 <div class="game-card" id="card">
     <div id="msg-overlay"></div>
+    <div class="timer-box" id="timer">01:00</div>
     <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
-    <p style="font-size:10px; opacity:0.8;">Stage {st.session_state.lvl + 1}</p>
+    <p style="font-size:10px; opacity:0.8; margin:2px 0;">Stage {st.session_state.lvl + 1}</p>
+    
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
-    <button class="music-btn" id="musicToggle" onclick="toggleMusic()">⚔️ QUEST THEME: OFF</button>
+    
+    <button class="music-btn" id="musicToggle" onclick="toggleMusic()">⚔️ THEME: OFF</button>
 </div>
 
 <script>
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
+    let timeLeft = 60;
+    let timerActive = true;
+    
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let musicInterval = null;
 
@@ -88,8 +96,7 @@ game_html = f"""
     }}
 
     function playApplause() {{
-        const dur = 1.5;
-        for (let i = 0; i < 15; i++) {{
+        for (let i = 0; i < 20; i++) {{
             const t = audioCtx.currentTime + (Math.random() * 0.5);
             const bufferSize = audioCtx.sampleRate * 0.2;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -100,26 +107,49 @@ game_html = f"""
             const gain = audioCtx.createGain();
             source.buffer = buffer;
             filter.type = 'bandpass'; filter.frequency.value = 1000 + (Math.random() * 2000);
-            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.setValueAtTime(0.08, t); // Increased volume
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
             source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
             source.start(t);
         }}
     }}
 
+    // 1-Minute Timer Logic
+    const timerElement = document.getElementById('timer');
+    const timerInterval = setInterval(() => {{
+        if(!timerActive) return;
+        timeLeft--;
+        let mins = Math.floor(timeLeft / 60);
+        let secs = timeLeft % 60;
+        timerElement.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+        
+        if(timeLeft <= 10) {{ timerElement.style.color = "#ff4b2b"; }}
+        
+        if(timeLeft <= 0) {{
+            timerActive = false;
+            clearInterval(timerInterval);
+            const msg = document.getElementById('msg-overlay');
+            msg.innerText = "TIME EXPIRED! ⏳";
+            msg.className = "msg-wrong show-msg";
+            playSound(100, 'sawtooth', 1.0, 0.2);
+            setTimeout(() => {{ window.location.reload(); }}, 2000);
+        }}
+    }}, 1000);
+
     function toggleMusic() {{
         const btn = document.getElementById('musicToggle');
         if(!musicInterval) {{
-            btn.innerText = "⚔️ QUEST THEME: ON";
+            btn.innerText = "⚔️ THEME: ON";
             musicInterval = setInterval(() => {{
                 const t = audioCtx.currentTime;
-                playSound(82, 'triangle', 0.4, 0.04);
-                setTimeout(() => {{ playSound(110, 'triangle', 0.2, 0.03); }}, 200);
-                setTimeout(() => {{ playSound(123, 'triangle', 0.2, 0.03); }}, 400);
+                // Louder Bass march
+                playSound(82, 'triangle', 0.5, 0.15); // Vol 0.04 -> 0.15
+                setTimeout(() => {{ playSound(110, 'triangle', 0.3, 0.1); }}, 250);
+                setTimeout(() => {{ playSound(123, 'triangle', 0.3, 0.1); }}, 500);
             }}, 1000);
         }} else {{
             clearInterval(musicInterval); musicInterval = null;
-            btn.innerText = "⚔️ QUEST THEME: OFF";
+            btn.innerText = "⚔️ THEME: OFF";
         }}
     }}
 
@@ -127,30 +157,36 @@ game_html = f"""
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
         ansRow.innerHTML = ""; poolRow.innerHTML = "";
+        
         for(let i=0; i<target.length; i++) {{
             let div = document.createElement('div'); div.className = 'tile';
             if(!answer[i]) {{ div.style.background = "rgba(255,255,255,0.05)"; }}
             div.innerText = answer[i] || "?";
-            if(answer[i]) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.05); removeLetter(i); }}; }}
+            if(answer[i] && timerActive) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); removeLetter(i); }}; }}
             ansRow.appendChild(div);
         }}
+        
         pool.forEach((char, i) => {{
             let div = document.createElement('div'); div.className = 'tile'; div.innerText = char;
-            div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.05); addLetter(i); }};
+            if(timerActive) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); addLetter(i); }}; }}
             poolRow.appendChild(div);
         }});
+
         if(answer.length === target.length) {{
             const msg = document.getElementById('msg-overlay');
             if(answer.join('') === target) {{
-                msg.innerText = "QUEST COMPLETE! 🏆"; msg.className = "msg-correct show-msg";
+                timerActive = false;
+                msg.innerText = "QUEST COMPLETE! 🏆";
+                msg.className = "msg-correct show-msg";
                 playApplause();
             }} else {{
-                msg.innerText = "DEFEATED! 💀"; msg.className = "msg-wrong show-msg";
-                playSound(150, 'sawtooth', 0.3); document.getElementById('card').classList.add('shake');
+                msg.innerText = "TRY AGAIN! 💀";
+                msg.className = "msg-wrong show-msg";
+                playSound(150, 'sawtooth', 0.3, 0.1);
                 setTimeout(() => {{ 
-                    msg.classList.remove('show-msg'); document.getElementById('card').classList.remove('shake');
+                    msg.classList.remove('show-msg'); 
                     answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render();
-                }}, 1200);
+                }}, 1000);
             }}
         }}
     }}
@@ -163,24 +199,20 @@ game_html = f"""
 """
 
 # 4. Render Game
-components.html(game_html, height=290)
+components.html(game_html, height=300)
 
 # 5. DATA SHEET & VERIFICATION
-st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
-verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name...", label_visibility="collapsed")
+st.markdown("<div style='margin-top: -10px;'>", unsafe_allow_html=True)
+verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter element name to claim your reward...", label_visibility="collapsed")
 
 if verify_text.upper() == target_word:
     data = ELEMENTS_DB[target_word]
     st.markdown(f"""
-    <div style="background: #fff; padding: 15px; border-radius: 10px; border: 2px solid #f39c12; margin-bottom: 10px;">
+    <div style="background: #fff; padding: 15px; border-radius: 10px; border: 2px solid #f39c12; margin-bottom: 10px; color: #222;">
         <h4 style="color: #2c3e50; margin-top:0;">🛡️ {target_word} KNOWLEDGE SCROLL</h4>
-        <table style="width:100%; font-size:13px; text-align:left;">
-            <tr style="border-bottom: 1px solid #eee;"><td><b>Atomic No:</b></td><td>{data[0]}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td><b>Mass No:</b></td><td>{data[1]}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td><b>Group:</b></td><td>{data[2]}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td><b>Period:</b></td><td>{data[3]}</td></tr>
-        </table>
-        <p style="font-size: 13px; color: #555; margin-top:10px;"><b>Lore:</b> {data[4]}</p>
+        <p style="font-size: 14px; margin: 5px 0;"><b>Atomic No:</b> {data[0]} | <b>Mass No:</b> {data[1]}</p>
+        <p style="font-size: 14px; margin: 5px 0;"><b>Group:</b> {data[2]} | <b>Period:</b> {data[3]}</p>
+        <p style="font-size: 13px; color: #555; border-top: 1px solid #eee; padding-top: 5px;"><b>Lore:</b> {data[4]}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -188,20 +220,21 @@ if verify_text.upper() == target_word:
         st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
         st.rerun()
 else:
-    st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
+    st.button("🔒 PATH BLOCKED (Solve Scramble First)", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # 6. ENHANCED HOW TO PLAY
 st.markdown("---")
 st.markdown("""
-<div style="background: #2c3e50; padding: 18px; border-radius: 15px; border-left: 6px solid #f39c12; color: white;">
-    <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Guide</h3>
-    <ul style="font-size: 14px; padding-left: 20px;">
-        <li style="margin-bottom: 8px;"><b>Loot Letters:</b> Tap letters to fill Quest Slots.</li>
-        <li style="margin-bottom: 8px;"><b>Victory:</b> Spell correctly to hear the <b>Applause</b>.</li>
-        <li style="margin-bottom: 8px;"><b>Scroll:</b> Type the name below to reveal lore and advance.</li>
+<div style="background: #2c3e50; padding: 15px; border-radius: 15px; border-left: 6px solid #f39c12; color: white;">
+    <h3 style="margin-top:0; color: #f39c12; font-size: 18px;">⌛ The Timed Quest</h3>
+    <ul style="font-size: 13px; padding-left: 20px; line-height: 1.4;">
+        <li><b>The Clock:</b> You have 60 seconds to assemble the element.</li>
+        <li><b>Loud Audio:</b> Ensure your volume is up to hear the Quest March!</li>
+        <li><b>Victory:</b> Correct spelling stops the timer and triggers the <b>Applause</b>.</li>
+        <li><b>Failure:</b> If the timer hits zero, the level resets!</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
