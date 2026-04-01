@@ -5,7 +5,7 @@ import random
 # 1. Page Config
 st.set_page_config(page_title="Atomic Quest", layout="centered")
 
-# 2. SS1 Curriculum Element Database
+# 2. Comprehensive Element Database
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "Ne", "A noble gas with a stable octet structure. It does not react because its outer shell is full."),
     "BORON": (5, 11, 13, 2, "B", "A metalloid used in heat-resistant glass. It has 3 electrons in its valence shell."),
@@ -48,7 +48,7 @@ if st.button("💣"):
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE
+# 3. THE GAME ENGINE (FAST POPUPS)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -74,7 +74,7 @@ game_html = f"""
         #msg-overlay {{
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
+            transition: 0.15s ease-in-out; pointer-events: none;
         }}
         .msg-correct {{ background: #f1c40f; color: #000; }}
         .msg-wrong {{ background: #e74c3c; color: white; }}
@@ -121,7 +121,7 @@ game_html = f"""
             setTimeout(() => {{ 
                 const btn = window.parent.document.querySelectorAll('button');
                 for (let b of btn) if(b.innerText.includes("💣")) b.click();
-            }}, 1000);
+            }}, 500);
         }}
     }}, 1000);
 
@@ -149,15 +149,18 @@ game_html = f"""
                 msg.innerText = "STABILIZED! 🏆";
                 msg.className = "msg-correct show-msg";
                 playSound(523, 'sine', 0.4);
+                // Disappears immediately (400ms)
+                setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 400);
             }} else {{
                 msg.innerText = "ERROR! 💀";
                 msg.className = "msg-wrong show-msg";
+                playSound(150, 'sawtooth', 0.2);
                 setTimeout(() => {{ 
                     msg.classList.remove('show-msg'); 
                     answer.forEach(char => pool.push(char));
                     answer = [];
                     render();
-                }}, 800);
+                }}, 400);
             }}
         }}
     }}
@@ -169,10 +172,10 @@ game_html = f"""
 </html>
 """
 
-# 4. Main App Logic
+# 4. Main App
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Your Hearts have run dry.")
-    if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
+    st.error("💀 GAME OVER! Energy Depleted.")
+    if st.button("♻️ RESTART QUEST", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -185,22 +188,22 @@ else:
     verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type in the element name to unlock level", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
-        data = ELEMENTS_DB[target_word]
+        current_data = ELEMENTS_DB[target_word]
         st.markdown(f"""
-        <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; color: #333;">
+        <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
             <div style="text-align: center; border-bottom: 2px solid #f39c12; margin-bottom: 15px;">
                 <h2 style="margin: 0; color: #2c3e50;">{target_word}</h2>
-                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{data[4]}</span>
+                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{current_data[4]}</span>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{data[0]}</span></div>
-                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{data[1]}</span></div>
+                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{current_data[0]}</span></div>
+                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{current_data[1]}</span></div>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
-                <div style="text-align: center;"><b>Group</b><br>{data[2]}</div>
-                <div style="text-align: center;"><b>Period</b><br>{data[3]}</div>
+                <div style="text-align: center;"><b>Group</b><br>{current_data[2]}</div>
+                <div style="text-align: center;"><b>Period</b><br>{current_data[3]}</div>
             </div>
-            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>SS1 Curriculum Overview:</b> {data[5]}</p>
+            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Element Overview:</b> {current_data[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
