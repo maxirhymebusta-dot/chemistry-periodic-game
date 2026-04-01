@@ -1,79 +1,94 @@
 import streamlit as st
-import random
+import time
 
-# 1. Page Config
-st.set_page_config(page_title="Atomic Matcher", layout="centered")
+# 1. Setup & Styling
+st.set_page_config(page_title="Periodic Master: Level Quest", layout="centered")
 
-# 2. Custom CSS for a Professional "Lab" look
 st.markdown("""
 <style>
-    .element-card {
-        padding: 15px; border-radius: 10px; border: 2px solid #82c91e;
-        text-align: center; font-weight: bold; margin: 10px 0; cursor: pointer;
-        background-color: #f8f9fa; transition: 0.3s;
+    .stButton>button {
+        height: 60px; font-size: 18px !important; font-weight: 700 !important;
+        border-radius: 12px !important; border: 2px solid #82c91e !important;
+        background-color: white; color: #333; transition: 0.3s;
     }
-    .selected { background-color: #a5d8ff !important; border-color: #1971c2 !important; }
-    .matched { background-color: #b2f2bb !important; border-color: #2b8a3e !important; color: #2b8a3e; }
+    .stButton>button:hover { background-color: #f1f3f5; border-color: #2b8a3e !important; }
+    .level-header { text-align: center; color: #2b8a3e; margin-bottom: 20px; }
+    .stat-box { text-align: center; background: #f8f9fa; padding: 10px; border-radius: 10px; border: 1px solid #eee; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. Data: First 20 Elements
-DATA = [
-    {"sym": "H", "name": "Hydrogen"}, {"sym": "He", "name": "Helium"},
-    {"sym": "Li", "name": "Lithium"}, {"sym": "Be", "name": "Beryllium"},
-    {"sym": "B", "name": "Boron"}, {"sym": "C", "name": "Carbon"},
-    {"sym": "N", "name": "Nitrogen"}, {"sym": "O", "name": "Oxygen"}
-] # You can easily add all 20 here
+# 2. Data Organization (Level by Level)
+LEVELS = {
+    1: [("H", "Hydrogen"), ("He", "Helium"), ("Li", "Lithium"), ("Be", "Beryllium"), ("B", "Boron")],
+    2: [("C", "Carbon"), ("N", "Nitrogen"), ("O", "Oxygen"), ("F", "Fluorine"), ("Ne", "Neon")],
+    3: [("Na", "Sodium"), ("Mg", "Magnesium"), ("Al", "Aluminium"), ("Si", "Silicon"), ("P", "Phosphorus")],
+    4: [("S", "Sulphur"), ("Cl", "Chlorine"), ("Ar", "Argon"), ("K", "Potassium"), ("Ca", "Calcium")]
+}
 
-if 'score' not in st.session_state: st.session_state.score = 0
-if 'selected_sym' not in st.session_state: st.session_state.selected_sym = None
+# 3. Initialize Session State
+if 'current_level' not in st.session_state: st.session_state.current_level = 1
 if 'matches' not in st.session_state: st.session_state.matches = []
+if 'selected_sym' not in st.session_state: st.session_state.selected_sym = None
+if 'score' not in st.session_state: st.session_state.score = 0
 
-st.title("🧪 Atomic Matcher")
-st.write("Match the **Symbol** to the **Full Name**.")
+# 4. Game Header
+st.markdown(f"<h1 class='level-header'>🔬 Level {st.session_state.current_level}: The Atomic Quest</h1>", unsafe_allow_html=True)
 
-# 4. Game Logic & UI
+# Progress Bar
+progress = len(st.session_state.matches) / 5
+st.progress(progress)
+
+# --- GAME INTERFACE ---
+current_data = LEVELS[st.session_state.current_level]
+
 col1, col2 = st.columns(2)
 
-# Column 1: Symbols
 with col1:
-    st.subheader("Symbols")
-    for item in DATA:
-        is_matched = item['sym'] in st.session_state.matches
-        label = f"✨ {item['sym']}" if is_matched else item['sym']
-        if st.button(label, key=f"sym_{item['sym']}", disabled=is_matched, use_container_width=True):
-            st.session_state.selected_sym = item['sym']
+    st.markdown("### Symbols")
+    for sym, name in current_data:
+        is_done = sym in st.session_state.matches
+        btn_label = f"✨ {sym}" if is_done else sym
+        if st.button(btn_label, key=f"s_{sym}", disabled=is_done, use_container_width=True):
+            st.session_state.selected_sym = sym
+            st.toast(f"Selected {sym}. Now find its name!", icon="🧪")
 
-# Column 2: Names
 with col2:
-    st.subheader("Names")
-    # Shuffle names so they aren't directly across from the symbol
-    shuffled_data = sorted(DATA, key=lambda x: x['name']) 
-    for item in shuffled_data:
-        is_matched = item['sym'] in st.session_state.matches
-        label = f"✅ {item['name']}" if is_matched else item['name']
-        
-        if st.button(label, key=f"name_{item['name']}", disabled=is_matched, use_container_width=True):
-            if st.session_state.selected_sym == item['sym']:
-                st.session_state.matches.append(item['sym'])
-                st.toast(f"Correct! {item['sym']} is {item['name']}", icon="🧪")
-                st.session_state.score += 10
+    st.markdown("### Names")
+    # Shuffling names for the UI only
+    names_only = sorted(current_data, key=lambda x: x[1])
+    for sym, name in names_only:
+        is_done = sym in st.session_state.matches
+        btn_label = f"✅ {name}" if is_done else name
+        if st.button(btn_label, key=f"n_{name}", disabled=is_done, use_container_width=True):
+            if st.session_state.selected_sym == sym:
+                st.session_state.matches.append(sym)
+                st.session_state.score += 20
                 st.session_state.selected_sym = None
+                st.success(f"Correct! {sym} is {name}")
+                time.sleep(0.5)
                 st.rerun()
             else:
-                st.error("Try again!")
+                st.error("Incorrect Match!")
 
-# 5. Progress
-st.divider()
-st.progress(len(st.session_state.matches) / len(DATA))
-st.write(f"**Score:** {st.session_state.score} | **Found:** {len(st.session_state.matches)}/{len(DATA)}")
-
-if len(st.session_state.matches) == len(DATA):
+# --- LEVEL TRANSITION ---
+if len(st.session_state.matches) == 5:
     st.balloons()
-    st.success("Congratulations! You've mastered the first elements!")
-    if st.button("Restart Experiment"):
-        st.session_state.clear()
-        st.rerun()
+    if st.session_state.current_level < 4:
+        if st.button("🚀 UNLOCK NEXT LEVEL", use_container_width=True):
+            st.session_state.current_level += 1
+            st.session_state.matches = []
+            st.session_state.selected_sym = None
+            st.rerun()
+    else:
+        st.success("🏆 YOU ARE A PERIODIC MASTER!")
+        if st.button("♻️ Reset Laboratory"):
+            st.session_state.current_level = 1
+            st.session_state.matches = []
+            st.session_state.score = 0
+            st.rerun()
 
-st.markdown("<p style='text-align: center; color: grey;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-                
+# 5. Footer Stats
+st.write("---")
+c1, c2 = st.columns(2)
+with c1: st.markdown(f"<div class='stat-box'><b>Total Score:</b> {st.session_state.score}</div>", unsafe_allow_html=True)
+with c2: st.markdown(f"<div class='stat-box'><b>MSc Project:</b> Favour</div>", unsafe_allow_html=True)
