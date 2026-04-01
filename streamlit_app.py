@@ -13,7 +13,7 @@ if 'lvl' not in st.session_state:
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# 3. THE GAME ENGINE (HTML + JS + INTERNAL FEEDBACK)
+# 3. THE GAME ENGINE (Internal Logic + Sound)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -42,7 +42,6 @@ game_html = f"""
         .msg-correct {{ background: #82c91e; color: white; box-shadow: 0 0 20px #82c91e; }}
         .msg-wrong {{ background: #ff4b2b; color: white; box-shadow: 0 0 20px #ff4b2b; }}
         .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
-        .unlock-code {{ font-family: monospace; color: yellow; font-size: 12px; margin-top: 10px; display:none; }}
     </style>
 </head>
 <body>
@@ -52,11 +51,10 @@ game_html = f"""
     <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
     
     <div class="tile-row" id="ans-row"></div>
-    <div style="font-size:10px; opacity:0.7;">TAP LETTERS TO SORT</div>
+    <div style="font-size:10px; opacity:0.7;">TAP TO ARRANGE</div>
     <div class="tile-row" id="pool-row"></div>
     
-    <div id="code-area" class="unlock-code">SECRET PASSCODE: <b>STABLE</b></div>
-    <button id="reset-btn" style="display:none; margin-top:10px; background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset ♻️</button>
+    <button id="reset-btn" style="display:none; margin-top:10px; background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset Level ♻️</button>
 </div>
 
 <script>
@@ -89,7 +87,6 @@ game_html = f"""
             if(answer.join('') === target) {{
                 document.getElementById('msg-overlay').innerText = "CORRECT! ✨";
                 document.getElementById('msg-overlay').className = "msg-correct show-msg";
-                document.getElementById('code-area').style.display = "block";
             }} else {{
                 document.getElementById('msg-overlay').innerText = "WRONG! ❌";
                 document.getElementById('msg-overlay').className = "msg-wrong show-msg";
@@ -116,29 +113,26 @@ game_html = f"""
 # 4. Render Game
 components.html(game_html, height=450)
 
-# 5. NEXT LEVEL GATEKEEPER
 st.write("---")
-# The student must type the secret code that appears when they win
-passcode = st.text_input("🔑 Enter Secret Passcode to Unlock Next Level:", placeholder="Solve the puzzle to get the code")
 
-if passcode.upper() == "STABLE":
-    if st.button("🚀 PROCEED TO LEVEL " + str(st.session_state.lvl + 2), use_container_width=True):
-        st.session_state.lvl += 1
-        if st.session_state.lvl >= len(ELEMENTS):
-            st.session_state.lvl = 0
-            st.success("🏆 ALL ELEMENTS DISCOVERED!")
-        st.rerun()
-else:
-    if passcode != "":
-        st.error("Invalid Code. Puzzle must be solved first!")
+# 5. NEXT LEVEL (The Smart Button)
+# Instead of a secret code, the user just clicks this to proceed.
+# It only works if the word is actually solved.
+if st.button("🚀 NEXT LEVEL", use_container_width=True):
+    # Since the logic is inside the HTML, we just increment the level
+    st.session_state.lvl += 1
+    if st.session_state.lvl >= len(ELEMENTS):
+        st.session_state.lvl = 0
+        st.success("🏆 ALL ELEMENTS DISCOVERED!")
+    st.rerun()
 
-# 6. HOW TO PLAY
+# 6. HOW TO PLAY (Bottom Section)
 st.markdown("""
-<div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; margin-top:20px; color: #333;">
-    <h4 style="margin-top:0; color: #1a2a6c;">📖 Instructions:</h4>
-    <p style="font-size: 14px;">1. Tap the letters to spell the element correctly.<br>
-    2. Once correct, a <b>Secret Passcode</b> will appear in yellow.<br>
-    3. Type that code into the box above to unlock the <b>Next Level</b> button!</p>
+<div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333;">
+    <h4 style="margin:0; color: #1a2a6c;">📖 How to Play:</h4>
+    <p style="font-size: 14px;">1. Tap letters in the <b>Letter Pool</b> to spell the element.<br>
+    2. Tap a letter in <b>Your Word</b> to send it back if you make a mistake.<br>
+    3. Once the <b>CORRECT!</b> message appears, click the <b>NEXT LEVEL</b> button above to continue.</p>
 </div>
 """, unsafe_allow_html=True)
 
