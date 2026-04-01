@@ -1,49 +1,35 @@
 import streamlit as st
-import time
 
-# 1. THE STYLES (Clean White, Pill Shapes, and Table Grid)
+# 1. CSS for Selection and Highlights
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
     .word-header {
-        display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
         background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;
     }
-    .tag { font-size: 10px; font-weight: 700; color: #444; text-transform: uppercase; }
-    .found { text-decoration: line-through; color: #ccc; }
+    .tag-found { text-decoration: line-through; color: #adb5bd; font-weight: bold; }
+    .tag-pending { color: #333; font-weight: bold; }
 
-    /* THE FIX: Standard HTML Table for a perfect Grid */
-    table.game-grid {
-        margin-left: auto; margin-right: auto;
-        border-collapse: separate; border-spacing: 4px;
+    /* The Grid Layout */
+    .grid-container {
+        display: grid; grid-template-columns: repeat(10, 1fr);
+        gap: 5px; max-width: 350px; margin: 0 auto;
     }
-    td.cell {
-        width: 32px; height: 32px;
-        text-align: center; vertical-align: middle;
-        font-size: 18px; font-weight: 900; color: #333;
-        font-family: sans-serif;
-    }
-
-    /* Pill Highlights from your Screenshot */
-    .pill-red { background-color: #ffc9c9; border-radius: 50%; color: #c92a2a; }
-    .pill-blue { background-color: #a5d8ff; border-radius: 50%; color: #1971c2; }
-    .pill-green { background-color: #b2f2bb; border-radius: 50%; color: #2b8a3e; }
-
-    .footer-bar {
-        display: flex; justify-content: space-around; align-items: center;
-        width: 280px; margin: 25px auto; padding: 8px;
-        border: 2px solid #82c91e; border-radius: 30px;
-        font-weight: bold; color: #333;
+    
+    /* Letter Button Styling */
+    .stButton>button {
+        width: 35px !important; height: 35px !important;
+        padding: 0px !important; font-size: 18px !important;
+        font-weight: 900 !important; border-radius: 50% !important;
+        border: 1px solid #eee !important; background-color: white !important;
+        color: #333 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # 2. DATA (First 20 Elements)
-ELEMENTS = [
-    "HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", 
-    "OXYGEN", "FLUORINE", "NEON", "SODIUM", "MAGNESIUM", "ALUMINIUM", "SILICON", 
-    "PHOSPHORUS", "SULPHUR", "CHLORINE", "ARGON", "POTASSIUM", "CALCIUM"
-]
+ELEMENTS = ["HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN"]
 
 GRID_DATA = [
     "B O X Y G E N N N N", "L E A P T U E C I I", "O S R B Z G I A T T", 
@@ -52,43 +38,47 @@ GRID_DATA = [
     "C A L C I U M X Y Z"
 ]
 
+# 3. SESSION STATE
 if 'found' not in st.session_state: st.session_state.found = []
-if 'start' not in st.session_state: st.session_state.start = time.time()
+if 'selection' not in st.session_state: st.session_state.selection = ""
 
-# --- WORD LIST ---
+# --- TOP: WORD BANK ---
 st.markdown('<div class="word-header">', unsafe_allow_html=True)
 for e in ELEMENTS:
-    status = "found" if e in st.session_state.found else ""
-    st.markdown(f'<span class="tag {status}">{e}</span>', unsafe_allow_html=True)
+    cls = "tag-found" if e in st.session_state.found else "tag-pending"
+    st.markdown(f'<span class="{cls}">{e}</span>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- THE GRID (Using Table to Force Format) ---
-grid_html = '<table class="game-grid">'
+# --- MIDDLE: THE INTERACTIVE GRID ---
+st.write(f"### Current Selection: `{st.session_state.selection}`")
+
+# Create columns for the grid
+cols = st.columns(10)
 for r_idx, row_str in enumerate(GRID_DATA):
-    grid_html += '<tr>'
     letters = row_str.split()
     for c_idx, char in enumerate(letters):
-        h = ""
-        # Manual Highlight Mapping
-        if r_idx == 0 and c_idx in range(1,7): h = "pill-red"
-        if r_idx == 8 and c_idx in range(0,7): h = "pill-blue"
-        if c_idx == 9 and r_idx in range(0,9): h = "pill-green"
-        grid_html += f'<td class="cell {h}">{char}</td>'
-    grid_html += '</tr>'
-grid_html += '</table>'
+        # Unique key for every button
+        if cols[c_idx].button(char, key=f"btn_{r_idx}_{c_idx}"):
+            st.session_state.selection += char
+            
+            # Check if the built string matches any element
+            for word in ELEMENTS:
+                if st.session_state.selection == word:
+                    if word not in st.session_state.found:
+                        st.session_state.found.append(word)
+                        st.success(f"Discovered: {word}!")
+                        st.session_state.selection = "" # Clear after find
+                        st.rerun()
 
-st.markdown(grid_html, unsafe_allow_html=True)
-
-# --- FOOTER ---
-elapsed = int(time.time() - st.session_state.start)
-m, s = divmod(elapsed, 60)
-st.markdown(f'<div class="footer-bar">⏱️ {m:02d}:{s:02d} 🧩+</div>', unsafe_allow_html=True)
-
-# --- INPUT ---
-val = st.text_input("Found an element?", placeholder="Type name here...").upper().strip()
-if st.button("Check"):
-    if val in ELEMENTS and val not in st.session_state.found:
-        st.session_state.found.append(val)
+# --- CONTROLS ---
+col_clear, col_reset = st.columns(2)
+with col_clear:
+    if st.button("Clear Selection ❌"):
+        st.session_state.selection = ""
+        st.rerun()
+with col_reset:
+    if st.button("Reset Game ♻️"):
+        st.session_state.clear()
         st.rerun()
 
-st.markdown("<p style='text-align: center; color: #aaa; font-size: 10px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #999; margin-top: 30px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
