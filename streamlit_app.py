@@ -1,57 +1,58 @@
 import streamlit as st
 import random
 
-# 1. Advanced Game Aesthetics
-st.set_page_config(page_title="Atomic Stack", layout="centered")
+# 1. High-End Game Aesthetics
+st.set_page_config(page_title="Atomic Column", layout="centered")
 
 st.markdown("""
 <style>
-    /* Gradient Background for the whole app */
+    /* Professional Dark Lab Theme */
     .stApp {
-        background: linear-gradient(180deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+        background: radial-gradient(circle, #1a2a6c, #b21f1f, #fdbb2d);
+        background-attachment: fixed;
         color: white;
     }
     
-    /* Vertical Slot Container */
-    .vertical-stack {
+    /* Vertical Column Container */
+    .vertical-tube {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
-        padding: 20px;
+        gap: 12px;
+        padding: 30px 10px;
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(10px);
-        min-height: 400px;
-        width: 120px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50px; /* Makes it look like a test tube */
+        backdrop-filter: blur(15px);
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        width: 100px;
         margin: 0 auto;
     }
 
-    /* Scrabble Tile Styling */
+    /* 3D Scrabble Tile Styling */
     .stButton>button {
-        width: 60px !important;
-        height: 60px !important;
-        font-size: 24px !important;
+        width: 65px !important;
+        height: 65px !important;
+        font-size: 26px !important;
         font-weight: 900 !important;
-        color: #2d3436 !important;
-        background: #f9f9f9 !important;
+        color: #1a2a6c !important;
+        background: #fdfdfd !important;
         border: none !important;
-        border-radius: 12px !important;
-        box-shadow: 0 6px 0 #d1d1d1, 0 8px 15px rgba(0,0,0,0.3) !important;
+        border-radius: 15px !important;
+        box-shadow: 0 8px 0 #bdc3c7, 0 12px 20px rgba(0,0,0,0.4) !important;
         transition: all 0.1s ease;
     }
 
     .stButton>button:active {
-        transform: translateY(4px) !important;
-        box-shadow: 0 2px 0 #d1d1d1 !important;
+        transform: translateY(6px) !important;
+        box-shadow: 0 2px 0 #bdc3c7 !important;
     }
 
-    /* Target Text */
-    .game-status {
+    /* Labels and Headers */
+    .game-text {
         text-align: center;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        font-family: 'Trebuchet MS', sans-serif;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -63,71 +64,69 @@ ELEMENTS = [
     "ALUMINIUM", "MAGNESIUM", "POTASSIUM", "CALCIUM"
 ]
 
-# 3. State Management
-if 'level' not in st.session_state: st.session_state.level = 0
-if 'ans_tiles' not in st.session_state: st.session_state.ans_tiles = []
-if 'pool_tiles' not in st.session_state:
-    target = ELEMENTS[st.session_state.level]
-    pool = list(target)
-    random.shuffle(pool)
-    st.session_state.pool_tiles = pool
+# 3. Game State Logic
+if 'lvl' not in st.session_state: st.session_state.lvl = 0
+if 'ans_stack' not in st.session_state: st.session_state.ans_stack = []
+if 'pool_grid' not in st.session_state:
+    target = ELEMENTS[st.session_state.lvl]
+    p = list(target)
+    random.shuffle(p)
+    st.session_state.pool_grid = p
 
-target_word = ELEMENTS[st.session_state.level]
+target_word = ELEMENTS[st.session_state.lvl]
 
 # 4. Header UI
-st.markdown("<h1 class='game-status'>🔬 ATOMIC STACK</h1>", unsafe_allow_html=True)
-st.markdown(f"<h3 class='game-status'>Level {st.session_state.level + 1}: Unstack the Element</h3>", unsafe_allow_html=True)
+st.markdown("<h1 class='game-text'>⚗️ ATOMIC COLUMN</h1>", unsafe_allow_html=True)
+st.markdown(f"<h3 class='game-text'>Level {st.session_state.lvl + 1}: Unstack {target_word[0]}...</h3>", unsafe_allow_html=True)
 
-# 5. THE VERTICAL STACK (The Answer Area)
+# 5. THE VERTICAL COLUMN (Answer Area)
 st.write(" ")
-cols = st.columns([1, 1, 1]) # Center the vertical line
+c1, c2, c3 = st.columns([1, 2, 1])
 
-with cols[1]:
-    st.markdown("<p style='text-align:center; font-weight:bold;'>Vertical Answer</p>", unsafe_allow_html=True)
-    # This creates the vertical visual line
+with c2:
+    st.markdown("<div class='vertical-tube'>", unsafe_allow_html=True)
     for i in range(len(target_word)):
-        char = st.session_state.ans_tiles[i] if i < len(st.session_state.ans_tiles) else "?"
-        if st.button(char, key=f"ans_{i}_{char}"):
-            if i < len(st.session_state.ans_tiles):
-                val = st.session_state.ans_tiles.pop(i)
-                st.session_state.pool_tiles.append(val)
+        # Display letters already picked or a placeholder
+        char = st.session_state.ans_stack[i] if i < len(st.session_state.ans_stack) else "?"
+        if st.button(char, key=f"v_{i}_{char}"):
+            if i < len(st.session_state.ans_stack):
+                # Return letter to pool
+                removed = st.session_state.ans_stack.pop(i)
+                st.session_state.pool_grid.append(removed)
                 st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # 6. THE LETTER POOL (Horizontal Grid at Bottom)
 st.write("---")
-st.markdown("<p style='text-align:center; font-weight:bold;'>Letter Pool (Tap to move to stack)</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-weight:bold; letter-spacing:2px;'>TAP TO FILL THE COLUMN</p>", unsafe_allow_html=True)
 pool_cols = st.columns(6)
-for i, char in enumerate(st.session_state.pool_tiles):
+for i, char in enumerate(st.session_state.pool_grid):
     with pool_cols[i % 6]:
-        if st.button(char, key=f"pool_{i}_{char}"):
-            val = st.session_state.pool_tiles.pop(i)
-            st.session_state.ans_tiles.append(val)
+        if st.button(char, key=f"p_{i}_{char}"):
+            val = st.session_state.pool_grid.pop(i)
+            st.session_state.ans_stack.append(val)
             st.rerun()
 
 # 7. WIN LOGIC
-user_word = "".join(st.session_state.ans_tiles)
-if user_word == target_word:
+if "".join(st.session_state.ans_stack) == target_word:
     st.balloons()
-    st.success(f"🏆 STABILIZED! It is {target_word}")
-    if st.button("NEXT LEVEL 🚀", use_container_width=True):
-        st.session_state.level += 1
-        if st.session_state.level < len(ELEMENTS):
-            next_word = ELEMENTS[st.session_state.level]
-            p = list(next_word)
-            random.shuffle(p)
-            st.session_state.pool_tiles = p
-            st.session_state.ans_tiles = []
-            st.rerun()
-        else:
-            st.write("Master Chemist Level Reached!")
+    st.success(f"🧪 COLUMN STABILIZED: {target_word}")
+    if st.button("NEXT LEVEL ➡️", use_container_width=True):
+        st.session_state.lvl += 1
+        # Refresh for next element
+        next_w = ELEMENTS[st.session_state.lvl]
+        p = list(next_w)
+        random.shuffle(p)
+        st.session_state.pool_grid = p
+        st.session_state.ans_stack = []
+        st.rerun()
 
-# 8. Reset Option
-if st.button("Reset Stack ♻️", use_container_width=True):
-    st.session_state.ans_tiles = []
+# 8. Reset Button
+if st.button("Empty Column ♻️", use_container_width=True):
+    st.session_state.ans_stack = []
     p = list(target_word)
     random.shuffle(p)
-    st.session_state.pool_tiles = p
+    st.session_state.pool_grid = p
     st.rerun()
 
-st.markdown("<br><p style='text-align: center; color: white; font-size: 12px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-    
+st.markdown("<br><p style='text-align: center; color: white; opacity: 0.7;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
