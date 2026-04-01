@@ -29,39 +29,41 @@ ELEMENTS_DB = {
     "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal essential for building strong bones and teeth.")
 }
 
-ELEMENT_LIST = list(ELEMENTS_DB.keys())
+# --- RANDOMIZATION LOGIC ---
+if 'order' not in st.session_state:
+    all_keys = list(ELEMENTS_DB.keys())
+    random.shuffle(all_keys)
+    st.session_state.order = all_keys
 
-# --- SESSION STATE MANAGEMENT ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# HIDE INTERNAL TRIGGER BUTTONS
+# --- HIDDEN TRIGGERS (ABSOLUTELY INVISIBLE) ---
 st.markdown("""
     <style>
     div[data-testid="stButton"] button:has(div:contains("💣")),
     div[data-testid="stButton"] button:has(div:contains("💖")) {
         display: none !important;
-        height: 0px !important;
-        width: 0px !important;
+        position: absolute !important;
+        left: -9999px !important;
         visibility: hidden !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Penalty Trigger
 if st.button("💣"):
     st.session_state.lives -= 1
     if st.session_state.lives <= 0:
         st.session_state.game_over = True
     st.rerun()
 
-# Bonus Trigger
 if st.button("💖"):
     st.session_state.lives += 2
     st.rerun()
 
-target_word = ELEMENT_LIST[st.session_state.lvl]
+# Select the target element based on the randomized order
+target_word = st.session_state.order[st.session_state.lvl]
 
 # 3. THE GAME ENGINE
 game_html = f"""
@@ -116,7 +118,6 @@ game_html = f"""
     let answer = [];
     let timeLeft = 60;
     let timerActive = true;
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     function triggerPython(icon) {{
         const btn = window.parent.document.querySelectorAll('button');
@@ -157,11 +158,11 @@ game_html = f"""
                 timerActive = false;
                 msg.innerText = "+2 ❤️ BONUS!";
                 msg.className = "msg-correct show-msg";
-                setTimeout(() => {{ triggerPython("💖"); }}, 600);
+                setTimeout(() => {{ triggerPython("💖"); }}, 500);
             }} else {{
                 msg.innerText = "-1 ❤️ PENALTY!";
                 msg.className = "msg-wrong show-msg";
-                setTimeout(() => {{ triggerPython("💣"); }}, 600);
+                setTimeout(() => {{ triggerPython("💣"); }}, 500);
             }}
         }}
     }}
@@ -175,8 +176,12 @@ game_html = f"""
 
 # 4. App Logic
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Your atomic energy has depleted.")
-    if st.button("♻️ RESTART FROM STAGE 1", use_container_width=True):
+    st.error("💀 GAME OVER! Depleted Hearts.")
+    if st.button("♻️ RESTART NEW QUEST", use_container_width=True):
+        # Full reset including new shuffle
+        all_keys = list(ELEMENTS_DB.keys())
+        random.shuffle(all_keys)
+        st.session_state.order = all_keys
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -219,9 +224,12 @@ st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
     <h3 style="margin-top:0; color: #f39c12;">📖 How to Play</h3>
     <div style="font-size: 14px; line-height: 1.6;">
-        <p><b>1. Assemble the Atom:</b> Unscramble the name within <b>60 seconds</b>.</p>
-        <p><b>2. Life Rewards:</b> Correct answers grant a <b>+2 ❤️ Bonus</b>. Incorrect attempts or time-outs result in a <b>-1 ❤️ Penalty</b>.</p>
-        <p><b>3. Scientific Mastery:</b> Unlock the <i>Scroll of Truth</i> to study the atomic properties required for SS1 Chemistry.</p>
+        <p><b>1. Randomized Quest:</b> The elements appear in a different random order every time you play!</p>
+        <p><b>2. Life Rewards:</b> Solving the puzzle grants <b>+2 ❤️ Bonus</b>. Wrong guesses or timeouts result in <b>-1 ❤️ Penalty</b>.</p>
+        <p><b>3. Study the Atom:</b> Study the Atomic Number ($Z$) and Mass Number ($A$) carefully to master SS1 Chemistry.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+    
