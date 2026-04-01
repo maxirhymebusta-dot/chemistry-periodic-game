@@ -1,139 +1,140 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# 1. Page Setup
-st.set_page_config(page_title="MSc Project: Chemical Grid", layout="centered")
-st.markdown("<h2 style='text-align: center; color: #2b8a3e;'>🧪 ELEMENT DRAG-MATCH</h2>", unsafe_allow_html=True)
+# 1. Clean Layout
+st.set_page_config(page_title="Periodic Master", layout="centered")
+st.markdown("<h3 style='text-align: center; color: #2b8a3e;'>🧪 FIRST 20: LABORATORY GRID</h3>", unsafe_allow_html=True)
 
-# 2. THE ENGINE: High-Sensitivity Pointer Capture
+# 2. THE ENGINE: Zero-Latency Pointer Capture
 game_html = """
 <!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* CRITICAL: Stops the browser from stealing the touch */
-        * { touch-action: none; user-select: none; -webkit-user-select: none; box-sizing: border-box; }
+        /* THIS STOPS THE SHIT: Total browser lock */
+        html, body { 
+            touch-action: none; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            user-select: none; 
+            overflow: hidden; 
+            overscroll-behavior: none;
+            background: white; margin: 0; padding: 10px;
+            font-family: sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+        }
         
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: white; margin: 0; padding: 10px; }
-        
-        .word-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; justify-content: center; max-width: 300px; }
-        .word-item { font-size: 10px; font-weight: bold; color: #333; text-transform: uppercase; border: 1px solid #ddd; padding: 3px; border-radius: 4px; }
-        .crossed { text-decoration: line-through; color: #ccc; background: #fafafa; }
+        .word-bank { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; justify-content: center; max-width: 300px; }
+        .word { font-size: 10px; font-weight: bold; color: #444; border: 1px solid #ddd; padding: 2px 5px; border-radius: 4px; }
+        .done { text-decoration: line-through; color: #ccc; background: #f9f9f9; }
 
-        .grid-board { 
+        .grid-container { 
             display: grid; 
             grid-template-columns: repeat(10, 32px); 
-            gap: 5px; 
-            background: #ffffff; 
+            gap: 4px; 
             padding: 10px; 
             border: 3px solid #82c91e;
-            border-radius: 15px;
-            touch-action: none; /* FORCES MOBILE TO IGNORE SCROLL */
+            border-radius: 12px;
+            touch-action: none;
         }
         
         .cell { 
             width: 32px; height: 32px; 
             display: flex; align-items: center; justify-content: center; 
-            background: #fdfdfd; border: 1px solid #eee; 
-            font-weight: 800; font-size: 16px; border-radius: 5px;
-            pointer-events: none; /* Let the finger 'see through' to the board */
+            background: #fff; border: 1px solid #eee; 
+            font-weight: 800; font-size: 16px; border-radius: 4px;
+            pointer-events: none; /* Crucial: allows grid to track the finger */
         }
 
-        .highlighted { background-color: #a5d8ff !important; color: #1971c2; transform: scale(1.1); transition: 0.1s; }
-        .found { background-color: #b2f2bb !important; color: #2b8a3e; border-radius: 50% !important; border: none !important; }
+        .active { background-color: #a5d8ff !important; color: #1971c2; transform: scale(1.1); }
+        .solved { background-color: #b2f2bb !important; color: #2b8a3e; border-radius: 50% !important; border: none !important; }
         
-        #status-bar { margin-top: 15px; font-size: 18px; font-weight: bold; color: #1971c2; height: 25px; }
+        #current-word { margin-top: 15px; font-size: 18px; font-weight: bold; color: #1971c2; height: 30px; }
     </style>
 </head>
 <body>
 
-    <div class="word-list" id="wordList"></div>
-    
-    <div class="grid-board" id="board">
-        </div>
-    
-    <div id="status-bar">Wipe to Spell!</div>
+    <div class="word-bank" id="bank"></div>
+    <div class="grid-container" id="g"></div>
+    <div id="current-word">DRAG ACROSS LETTERS</div>
 
     <script>
         const elements = ["HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN"];
-        const gridData = ["B","O","X","Y","G","E","N","N","N","N","L","E","A","P","T","U","E","C","I","I","O","S","R","B","Z","G","I","A","T","T","Z","H","W","Y","O","J","W","R","R","R","U","R","E","R","L","R","I","B","O","O","E","B","D","L","A","L","O","O","G","G","I","Y","M","U","I","I","I","N","E","E","H","B","R","U","D","U","H","U","N","N","L","I","T","H","I","U","M","L","M","M","C","A","L","C","I","U","M","X","Y","Z"];
+        const grid = ["B","O","X","Y","G","E","N","N","N","N","L","E","A","P","T","U","E","C","I","I","O","S","R","B","Z","G","I","A","T","T","Z","H","W","Y","O","J","W","R","R","R","U","R","E","R","L","R","I","B","O","O","E","B","D","L","A","L","O","O","G","G","I","Y","M","U","I","I","I","N","E","E","H","B","R","U","D","U","H","U","N","N","L","I","T","H","I","U","M","L","M","M","C","A","L","C","I","U","M","X","Y","Z"];
 
-        let activeIndices = [];
-        let discovered = [];
-        let isTouching = false;
+        let path = [];
+        let solved = [];
+        let dragging = false;
 
-        const board = document.getElementById('board');
-        const status = document.getElementById('status-bar');
+        const container = document.getElementById('g');
+        const status = document.getElementById('current-word');
 
-        // Create Grid
-        gridData.forEach((char, i) => {
-            const d = document.createElement('div');
-            d.className = 'cell'; d.id = 'c' + i; d.innerText = char;
-            board.appendChild(d);
+        // Render Grid
+        grid.forEach((char, i) => {
+            const div = document.createElement('div');
+            div.className = 'cell'; div.id = 'idx' + i; div.innerText = char;
+            container.appendChild(div);
         });
 
-        function updateUI() {
-            document.getElementById('wordList').innerHTML = elements.map(e => 
-                `<span class="word-item ${discovered.includes(e) ? 'crossed' : ''}">${e}</span>`).join('');
+        function refreshBank() {
+            document.getElementById('bank').innerHTML = elements.map(e => 
+                `<span class="word ${solved.includes(e) ? 'done' : ''}">${e}</span>`).join('');
         }
 
-        // THE CORE DRAG LOGIC (Pointer Events)
-        board.onpointerdown = (e) => {
-            isTouching = true;
-            activeIndices = [];
-            board.setPointerCapture(e.pointerId); // LOCKS INPUT TO THIS GRID
-            processMove(e);
+        // POINTER LOCK LOGIC
+        container.onpointerdown = (e) => {
+            dragging = true;
+            path = [];
+            container.setPointerCapture(e.pointerId);
+            track(e);
         };
 
-        board.onpointermove = (e) => {
-            if (isTouching) processMove(e);
+        container.onpointermove = (e) => { if (dragging) track(e); };
+
+        container.onpointerup = (e) => {
+            dragging = false;
+            container.releasePointerCapture(e.pointerId);
+            check();
         };
 
-        board.onpointerup = (e) => {
-            isTouching = false;
-            board.releasePointerCapture(e.pointerId);
-            finalize();
-        };
-
-        function processMove(e) {
-            const hit = document.elementFromPoint(e.clientX, e.clientY);
-            if (hit && hit.id.startsWith('c')) {
-                const idx = parseInt(hit.id.substring(1));
-                if (!activeIndices.includes(idx)) {
-                    activeIndices.push(idx);
-                    hit.classList.add('highlighted');
-                    status.innerText = activeIndices.map(i => gridData[i]).join('');
+        function track(e) {
+            const target = document.elementFromPoint(e.clientX, e.clientY);
+            if (target && target.id.startsWith('idx')) {
+                const i = parseInt(target.id.replace('idx',''));
+                if (!path.includes(i)) {
+                    path.push(i);
+                    target.classList.add('active');
+                    status.innerText = path.map(p => grid[p]).join('');
                 }
             }
         }
 
-        function finalize() {
-            const word = activeIndices.map(i => gridData[i]).join('');
+        function check() {
+            const word = path.map(p => grid[p]).join('');
             if (elements.includes(word)) {
-                discovered.push(word);
-                activeIndices.forEach(idx => {
-                    const el = document.getElementById('c' + idx);
-                    el.classList.remove('highlighted');
-                    el.classList.add('found');
+                solved.push(word);
+                path.forEach(i => {
+                    document.getElementById('idx' + i).classList.remove('active');
+                    document.getElementById('idx' + i).classList.add('solved');
                 });
-                updateUI();
-                status.innerText = "✓ FOUND!";
+                refreshBank();
+                status.innerText = "✓ " + word;
             } else {
-                activeIndices.forEach(idx => {
-                    const el = document.getElementById('c' + idx);
-                    if (!el.classList.contains('found')) el.classList.remove('highlighted');
+                path.forEach(i => {
+                    const el = document.getElementById('idx' + i);
+                    if (!el.classList.contains('solved')) el.classList.remove('active');
                 });
-                status.innerText = "Try Again";
+                status.innerText = "TRY AGAIN";
             }
-            activeIndices = [];
+            path = [];
         }
 
-        updateUI();
+        refreshBank();
     </script>
 </body>
 </html>
 """
 
-components.html(game_html, height=600)
-st.markdown("<p style='text-align: center; color: #999; font-size: 11px;'>MSc | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+components.html(game_html, height=550)
+st.markdown("<p style='text-align: center; color: #999; font-size: 11px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
