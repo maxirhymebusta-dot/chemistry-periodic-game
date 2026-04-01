@@ -3,10 +3,9 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest: Elite", layout="centered")
+st.set_page_config(page_title="Atomic Quest: Stable", layout="centered")
 
-# 2. Comprehensive Element Database
-# Data: (Atomic No, Mass No, Group, Period, Overview)
+# 2. Element Database
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
     "BORON": (5, 11, 13, 2, "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
@@ -24,24 +23,21 @@ ELEMENTS_DB = {
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
 
-# --- GAME STATE ---
+# --- SESSION STATE ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
+if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# Life Loss Logic
-params = st.query_params
-if params.get("lose_life") == "true":
-    st.session_state.lives -= 1
-    st.query_params.clear()
-    if st.session_state.lives <= 0:
-        st.session_state.lvl = 0
-        st.session_state.lives = 3
-        st.error("💀 ALL LIVES LOST! Restarting from Level 1...")
+# Reset Game Logic
+def reset_to_start():
+    st.session_state.lvl = 0
+    st.session_state.lives = 3
+    st.session_state.game_over = False
     st.rerun()
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE (15s TIMER)
+# 3. THE QUEST ENGINE (NO REDIRECTS - PURE JAVASCRIPT LOGIC)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -58,7 +54,6 @@ game_html = f"""
         }}
         .stats-bar {{ display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px; font-weight: bold; font-size: 14px; }}
         #timer {{ color: #ff4757; font-family: monospace; font-size: 18px; }}
-        .lives-text {{ color: #ff4757; }}
         .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 40px; }}
         .tile {{
             width: 38px; height: 38px; background: #f39c12; color: #fff; border-radius: 5px;
@@ -79,11 +74,10 @@ game_html = f"""
 <div class="game-card" id="card">
     <div id="msg-overlay"></div>
     <div class="stats-bar">
-        <span class="lives-text">❤️ × {st.session_state.lives}</span>
+        <span id="lives-display">❤️ × {st.session_state.lives}</span>
         <span id="timer">15</span>
     </div>
     <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
-    
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
@@ -95,29 +89,31 @@ game_html = f"""
     let answer = [];
     let timeLeft = 15;
     let timerActive = true;
-    
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function playSound(freq, type, dur, vol=0.1) {{
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        g.gain.setValueAtTime(vol, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + dur);
+    function playSound(f, t, d, v=0.1) {{
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+        g.gain.setValueAtTime(v, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + d);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + d);
     }}
 
     const timerInterval = setInterval(() => {{
         if(!timerActive) return;
         timeLeft--;
         document.getElementById('timer').innerText = timeLeft;
-        if(timeLeft <= 5) playSound(400, 'sine', 0.1, 0.05);
-        
         if(timeLeft <= 0) {{
             timerActive = false;
-            clearInterval(timerInterval);
-            window.parent.location.href = window.parent.location.pathname + "?lose_life=true";
+            document.getElementById('msg-overlay').innerText = "LIFE LOST! ❤️-1";
+            document.getElementById('msg-overlay').className = "msg-wrong show-msg";
+            playSound(100, 'sawtooth', 0.5, 0.2);
+            // Instead of redirecting, we tell Streamlit via a hidden click
+            setTimeout(() => {{ 
+                const btn = window.parent.document.querySelectorAll('button');
+                for (let b of btn) if(b.innerText.includes("INTERNAL_REDUCE")) b.click();
+            }}, 1000);
         }}
     }}, 1000);
 
@@ -125,38 +121,23 @@ game_html = f"""
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
         ansRow.innerHTML = ""; poolRow.innerHTML = "";
-        
         for(let i=0; i<target.length; i++) {{
-            let div = document.createElement('div'); div.className = 'tile';
-            if(!answer[i]) div.style.background = "rgba(255,255,255,0.05)";
-            div.innerText = answer[i] || "?";
-            if(answer[i] && timerActive) div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); removeLetter(i); }};
-            ansRow.appendChild(div);
+            let d = document.createElement('div'); d.className = 'tile';
+            if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
+            d.innerText = answer[i] || "?";
+            if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
+            ansRow.appendChild(d);
         }}
-        
         pool.forEach((char, i) => {{
-            let div = document.createElement('div'); div.className = 'tile'; div.innerText = char;
-            if(timerActive) div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.1); addLetter(i); }};
-            poolRow.appendChild(div);
+            let d = document.createElement('div'); d.className = 'tile'; d.innerText = char;
+            if(timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); addLetter(i); }};
+            poolRow.appendChild(d);
         }});
-
-        if(answer.length === target.length) {{
-            const msg = document.getElementById('msg-overlay');
-            if(answer.join('') === target) {{
-                timerActive = false;
-                msg.innerText = "STABILIZED! 🏆";
-                msg.className = "msg-correct show-msg";
-                playSound(523, 'sine', 0.4, 0.1);
-                setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 1000);
-            }} else {{
-                msg.innerText = "ERROR! 💀";
-                msg.className = "msg-wrong show-msg";
-                playSound(150, 'sawtooth', 0.3, 0.1);
-                setTimeout(() => {{ 
-                    msg.classList.remove('show-msg'); 
-                    answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render();
-                }}, 800);
-            }}
+        if(answer.join('') === target) {{
+            timerActive = false;
+            document.getElementById('msg-overlay').innerText = "STABILIZED! 🏆";
+            document.getElementById('msg-overlay').className = "msg-correct show-msg";
+            playSound(523, 'sine', 0.4);
         }}
     }}
     function addLetter(i) {{ if(answer.length < target.length) {{ answer.push(pool.splice(i, 1)[0]); render(); }} }}
@@ -167,50 +148,51 @@ game_html = f"""
 </html>
 """
 
-# 4. Render Game
-components.html(game_html, height=260)
+# --- HIDDEN LIFE HANDLER ---
+st.markdown("<style>div[data-testid='stButton'] button:has(div:contains('INTERNAL_REDUCE')) { display: none; }</style>", unsafe_allow_html=True)
+if st.button("INTERNAL_REDUCE"):
+    st.session_state.lives -= 1
+    if st.session_state.lives <= 0:
+        st.session_state.game_over = True
+    st.rerun()
 
-# 5. DETAILED DATA SHEET
-st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
-verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type name to reveal knowledge...", label_visibility="collapsed")
-
-if verify_text.upper() == target_word:
-    data = ELEMENTS_DB[target_word]
-    st.markdown(f"""
-    <div style="background: #fff; padding: 15px; border-radius: 12px; border: 2px solid #f39c12; color: #222; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-        <h3 style="color: #2c3e50; margin: 0 0 10px 0; text-align: center; border-bottom: 2px solid #f39c12;">🛡️ {target_word} SCIENTIFIC DATA</h3>
-        
-        <p style="font-size: 14px; margin: 5px 0;"><b>Atomic Number ($Z$): {data[0]}</b><br>
-        <span style="font-size: 12px; color: #666;">This represents the number of protons in the nucleus. It defines the element's identity.</span></p>
-        
-        <p style="font-size: 14px; margin: 5px 0;"><b>Mass Number ($A$): {data[1]}</b><br>
-        <span style="font-size: 12px; color: #666;">The total sum of protons and neutrons. It determines the weight of the atom.</span></p>
-        
-        <p style="font-size: 14px; margin: 5px 0;"><b>Group: {data[2]} | Period: {data[3]}</b><br>
-        <span style="font-size: 12px; color: #666;">Group {data[2]} indicates chemical behavior; Period {data[3]} shows the number of electron shells.</span></p>
-        
-        <p style="font-size: 13px; color: #1a2a6c; border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px;"><b>Scientific Lore:</b> {data[4]}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
-        st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
-        st.rerun()
+# 4. Main App Logic
+if st.session_state.game_over:
+    st.error("💀 ALL HEARTS LOST! Your journey ends here.")
+    if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
+        reset_to_start()
 else:
-    st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
-st.markdown("</div>", unsafe_allow_html=True)
+    components.html(game_html, height=260)
+    st.write("---")
+    
+    # 5. DATA SHEET
+    verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to reveal knowledge...", label_visibility="collapsed")
 
-# 6. HOW TO PLAY (QUEST MANUAL)
-st.markdown("---")
+    if verify_text.upper() == target_word:
+        d = ELEMENTS_DB[target_word]
+        st.markdown(f"""
+        <div style="background: #fff; padding: 15px; border-radius: 12px; border: 2px solid #f39c12; color: #222;">
+            <h3 style="color: #2c3e50; margin: 0 0 10px 0; text-align: center;">🛡️ {target_word} DATA</h3>
+            <p style="font-size: 14px; margin: 4px 0;"><b>Atomic No (Protons):</b> {d[0]}</p>
+            <p style="font-size: 14px; margin: 4px 0;"><b>Mass No (Weight):</b> {d[1]}</p>
+            <p style="font-size: 14px; margin: 4px 0;"><b>Group/Period:</b> {d[2]} / {d[3]}</p>
+            <p style="font-size: 13px; color: #555; border-top: 1px solid #eee; padding-top: 5px;"><b>Lore:</b> {d[4]}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
+            st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
+            st.rerun()
+    else:
+        st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
+
+# 6. HOW TO PLAY
 st.markdown("""
-### 📖 How to Play (Quest Manual)
-
-1. **Unscramble:** Tap the gold letters in your **Inventory** to fill the empty slots within **15 seconds**.
-2. **Modify:** Tap a letter in the top slots if you need to send it back to the pool.
-3. **The Penalty:** If the timer hits **0**, you lose **1 Heart (❤️)**. Lose all 3, and you fall back to Level 1.
-4. **Knowledge Lock:** Once you see "STABILIZED," type the element's name into the **Scroll of Truth** below.
-5. **Learn:** Read the **Scientific Data** that appears to understand the element's Atomic Structure ($Z$ and $A$), position, and real-world use.
-6. **Advance:** Click "Advance" to move to the next stage of your quest!
+---
+### 📖 How to Play
+1. **Unscramble:** Tap letters within **15 seconds** to spell the element.
+2. **Penalty:** If the timer hits **0**, you lose **1 ❤️**. Lose 3 and you restart from Level 1.
+3. **Knowledge:** Type the name in the **Scroll of Truth** to unlock the Scientific Data.
+4. **Data:** Read the Atomic No (Identity), Mass No (Weight), and Group/Period (Location) before moving on.
 """)
 
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
