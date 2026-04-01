@@ -3,22 +3,23 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest: Elite", layout="centered")
+st.set_page_config(page_title="Atomic Quest: SS1 Edition", layout="centered")
 
-# 2. Comprehensive Element Database
+# 2. SS1 Curriculum Element Database
+# Data: (Atomic No, Mass No, Group, Period, Symbol, Description)
 ELEMENTS_DB = {
-    "NEON": (10, 20, 18, 2, "Ne", "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
-    "BORON": (5, 11, 13, 2, "B", "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
-    "OXYGEN": (8, 16, 16, 2, "O", "A highly reactive nonmetal. Vital for respiration and combustion."),
-    "SODIUM": (11, 23, 1, 3, "Na", "A soft alkali metal. Highly reactive with water; found in common table salt."),
-    "CARBON": (6, 12, 14, 2, "C", "The basis of organic chemistry. Exists as graphite, diamond, and coal."),
-    "HELIUM": (2, 4, 18, 1, "He", "The second most abundant element. Used in balloons and cryogenics."),
-    "SILICON": (14, 28, 14, 3, "Si", "A semiconductor used in computer chips and solar cells."),
-    "LITHIUM": (3, 7, 1, 2, "Li", "Lightest metal. Crucial for high-density rechargeable batteries."),
-    "SULPHUR": (16, 32, 16, 3, "S", "A yellow nonmetal used in gunpowder, matches, and sulfuric acid."),
-    "CHLORINE": (17, 35, 17, 3, "Cl", "A toxic green gas used for water purification and disinfectants."),
-    "FLUORINE": (9, 19, 17, 2, "F", "The most electronegative element. Used in toothpaste and refrigerants."),
-    "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal vital for bones, teeth, and cellular functions.")
+    "NEON": (10, 20, 18, 2, "Ne", "A noble gas with a stable octet structure. It does not react because its outer shell is full."),
+    "BORON": (5, 11, 13, 2, "B", "A metalloid used in heat-resistant glass. It has 3 electrons in its valence shell."),
+    "OXYGEN": (8, 16, 16, 2, "O", "A non-metal essential for respiration. It is diatomic (O₂) and highly electronegative."),
+    "SODIUM": (11, 23, 1, 3, "Na", "A highly reactive alkali metal. It is stored in oil to prevent reaction with air or moisture."),
+    "CARBON": (6, 12, 14, 2, "C", "A non-metal that shows allotropy (Diamond and Graphite). It is the basis of organic chemistry."),
+    "HELIUM": (2, 4, 18, 1, "He", "A noble gas with a duplet structure. It is used in weather balloons because it is very light."),
+    "SILICON": (14, 28, 14, 3, "Si", "The second most abundant element in the Earth's crust. Used extensively in electronics."),
+    "LITHIUM": (3, 7, 1, 2, "Li", "The lightest metal. It belongs to the Alkali Metal family in Group 1."),
+    "SULPHUR": (16, 32, 16, 3, "S", "A yellow non-metal found in Group 16. It is used to vulcanize rubber and make matches."),
+    "CHLORINE": (17, 35.5, 17, 3, "Cl", "A halogen gas. It is a strong oxidizing agent used in water treatment to kill germs."),
+    "FLUORINE": (9, 19, 17, 2, "F", "The most reactive non-metal. It has the highest electronegativity on the periodic table."),
+    "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal. It is vital for the formation of strong bones and teeth.")
 }
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
@@ -28,15 +29,14 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# --- THE FIX: HIDE THE INTERNAL BUTTON COMPLETELY ---
+# HIDE THE INTERNAL TRIGGER BUTTON
 st.markdown("""
     <style>
-    /* Targeting the button by its text content and hiding the entire container */
     div[data-testid="stButton"] button:has(div:contains("💣")) {
         display: none !important;
+        height: 0px !important;
+        width: 0px !important;
         visibility: hidden !important;
-        position: absolute !important;
-        left: -9999px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -49,7 +49,7 @@ if st.button("💣"):
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE
+# 3. THE QUEST ENGINE (60s TIMER)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -65,7 +65,8 @@ game_html = f"""
             border: 2px solid #f39c12; position: relative;
         }}
         .stats-bar {{ display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px; font-weight: bold; font-size: 14px; }}
-        #timer {{ color: #ff4757; font-family: monospace; font-size: 18px; }}
+        #timer {{ color: #f1c40f; font-family: monospace; font-size: 18px; }}
+        .lives-text {{ color: #ff4757; }}
         .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 5px; margin: 8px 0; min-height: 40px; }}
         .tile {{
             width: 38px; height: 38px; background: #f39c12; color: #fff; border-radius: 5px;
@@ -80,8 +81,6 @@ game_html = f"""
         .msg-correct {{ background: #f1c40f; color: #000; }}
         .msg-wrong {{ background: #e74c3c; color: white; }}
         .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
-        .shake {{ animation: shake 0.3s ease-in-out; }}
-        @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-8px);}} 75% {{transform: translateX(8px);}} }}
     </style>
 </head>
 <body>
@@ -89,7 +88,7 @@ game_html = f"""
     <div id="msg-overlay"></div>
     <div class="stats-bar">
         <span id="lives-display">❤️ × {st.session_state.lives}</span>
-        <span id="timer">15</span>
+        <span id="timer">60</span>
     </div>
     <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
     <div class="tile-row" id="ans-row"></div>
@@ -101,7 +100,7 @@ game_html = f"""
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
-    let timeLeft = 15;
+    let timeLeft = 60;
     let timerActive = true;
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -118,15 +117,16 @@ game_html = f"""
         if(!timerActive) return;
         timeLeft--;
         document.getElementById('timer').innerText = timeLeft;
+        if(timeLeft <= 10) document.getElementById('timer').style.color = "#ff4757";
+        
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            const msg = document.getElementById('msg-overlay');
-            msg.innerText = "TIME EXPIRED! ⏳";
-            msg.className = "msg-wrong show-msg";
+            document.getElementById('msg-overlay').innerText = "TIME UP! ⏳";
+            document.getElementById('msg-overlay').className = "msg-wrong show-msg";
             setTimeout(() => {{ 
                 const btn = window.parent.document.querySelectorAll('button');
-                for (let b of btn) if(b.innerText.includes("INTERNAL_REDUCE")) b.click();
+                for (let b of btn) if(b.innerText.includes("💣")) b.click();
             }}, 1000);
         }}
     }}, 1000);
@@ -140,7 +140,6 @@ game_html = f"""
             if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
             d.innerText = answer[i] || "?";
             if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
-            ansRow.appendChild(div = d);
             ansRow.appendChild(d);
         }}
         pool.forEach((char, i) => {{
@@ -159,11 +158,8 @@ game_html = f"""
             }} else {{
                 msg.innerText = "ERROR! 💀";
                 msg.className = "msg-wrong show-msg";
-                document.getElementById('card').classList.add('shake');
-                playSound(150, 'sawtooth', 0.3, 0.2);
                 setTimeout(() => {{ 
                     msg.classList.remove('show-msg'); 
-                    document.getElementById('card').classList.remove('shake');
                     answer.forEach(char => pool.push(char));
                     answer = [];
                     render();
@@ -179,10 +175,10 @@ game_html = f"""
 </html>
 """
 
-# 4. Main App Logic
+# 4. App Logic
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Your Hearts have run dry.")
-    if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
+    st.error("💀 GAME OVER! Your energy has fully depleted.")
+    if st.button("♻️ RESTART SS1 CURRICULUM", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -191,8 +187,8 @@ else:
     components.html(game_html, height=260)
     st.write("---")
     
-    # 5. DATA SHEET
-    verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to reveal knowledge...", label_visibility="collapsed")
+    # 5. SS1 DATA SHEET
+    verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type name to unlock SS1 notes...", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
         d = ELEMENTS_DB[target_word]
@@ -203,14 +199,14 @@ else:
                 <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{d[4]}</span>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                <div style="text-align: center;"><b>Atomic No (Z)</b><br><span style="font-size: 20px;">{d[0]}</span></div>
-                <div style="text-align: center;"><b>Mass No (A)</b><br><span style="font-size: 20px;">{d[1]}</span></div>
+                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{d[0]}</span></div>
+                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{d[1]}</span></div>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
                 <div style="text-align: center;"><b>Group</b><br>{d[2]}</div>
                 <div style="text-align: center;"><b>Period</b><br>{d[3]}</div>
             </div>
-            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Scientific Overview:</b> {d[5]}</p>
+            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>SS1 Curriculum Overview:</b> {d[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
@@ -219,16 +215,17 @@ else:
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 
-# 6. HOW TO PLAY
+# 6. SS1 STUDENT GUIDE
 st.markdown("---")
+[attachment_0](attachment)
 st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
-    <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Manual: How to Play</h3>
+    <h3 style="margin-top:0; color: #f39c12;">🗺️ SS1 Quest Manual</h3>
     <div style="font-size: 14px; line-height: 1.6;">
-        <p><b>1. Assemble the Atom:</b> Tap letters in your <i>Inventory</i> to fill the slots. You have <b>15 seconds</b> before your energy depletes!</p>
-        <p><b>2. Survival Mechanics:</b> If the timer hits <b>0</b>, you lose 1 Heart (❤️). Lose all 3, and your progress resets to Stage 1.</p>
-        <p><b>3. Unlock Knowledge:</b> Once stabilized, type the element's full name in the <i>Scroll of Truth</i> below to reveal its scientific properties.</p>
-        <p><b>4. Master Chemistry:</b> Study the Atomic Number, Mass, Group, and Period of each element to complete your MSc research!</p>
+        <p><b>1. Master the Symbols:</b> Use your SS1 chemistry knowledge to unscramble the element name within <b>60 seconds</b>.</p>
+        <p><b>2. Life Management:</b> If the <b>💣</b> triggers (timer hits zero), you lose 1 Heart. Protect your 3 Hearts to reach the final element.</p>
+        <p><b>3. Periodic Law:</b> Once you stabilize an element, check the <i>Scroll of Truth</i>. Study the <b>Atomic Number</b> (number of protons) and <b>Mass Number</b> (protons + neutrons) carefully.</p>
+        <p><b>4. SS1 Exam Prep:</b> Focus on the <b>Group</b> (valence electrons) and <b>Period</b> (number of shells) to master the periodic table for your WAEC/NECO exams.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
