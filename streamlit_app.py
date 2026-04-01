@@ -44,7 +44,7 @@ st.markdown("""
     <style>
     /* Completely remove the specific buttons from the visual flow */
     button[kind="secondary"]:has(div:contains("💣")), 
-    button[kind="secondary"]:has(div:contains("💖")) {
+    button[kind="secondary"]:has(div:contains("")) {
         display: none !important;
         opacity: 0 !important;
         position: absolute !important;
@@ -65,7 +65,7 @@ with col1:
         st.rerun()
 
 with col2:
-    if st.button("💖"):
+    if st.button(""):
         st.session_state.lives += 2
         st.rerun()
 
@@ -164,7 +164,7 @@ game_html = f"""
                 timerActive = false;
                 msg.innerText = "+2 ❤️ BONUS!";
                 msg.className = "msg-correct show-msg";
-                setTimeout(() => {{ triggerPython("💖"); }}, 500);
+                setTimeout(() => {{ triggerPython(""); }}, 500);
             }} else {{
                 msg.innerText = "-1 ❤️ PENALTY!";
                 msg.className = "msg-wrong show-msg";
