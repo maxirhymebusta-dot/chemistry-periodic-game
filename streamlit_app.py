@@ -8,15 +8,11 @@ st.set_page_config(page_title="Atomic Row", layout="centered")
 # 2. Level Data
 ELEMENTS = ["NEON", "BORON", "OXYGEN", "SODIUM", "CARBON", "HELIUM", "SILICON", "LITHIUM", "SULPHUR", "CALCIUM", "MAGNESIUM", "ALUMINIUM"]
 
-if 'lvl' not in st.session_state: 
-    st.session_state.lvl = 0
-if 'input_val' not in st.session_state:
-    st.session_state.input_val = ""
+if 'lvl' not in st.session_state: st.session_state.lvl = 0
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# 3. THE GAME ENGINE
-# No more hidden signals—just pure, fast gameplay
+# 3. THE GAME ENGINE (HTML + JS + AUTO-UNLOCK)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -24,12 +20,12 @@ game_html = f"""
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Arial+Black&display=swap');
-        body {{ font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; background: transparent; }}
+        body {{ font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; background: transparent; overflow: hidden; }}
         .game-card {{
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
             padding: 25px; border-radius: 25px; color: white; text-align: center;
             width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
+            position: relative; transition: transform 0.2s;
         }}
         .tile-row {{ display: flex; flex-direction: row; justify-content: center; gap: 6px; margin: 15px 0; min-height: 50px; }}
         .tile {{
@@ -39,27 +35,35 @@ game_html = f"""
         }}
         #msg-overlay {{
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            padding: 15px 20px; border-radius: 20px; font-weight: bold; font-size: 20px; z-index: 100;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 15px 25px; border-radius: 50px; font-weight: bold; font-size: 22px; z-index: 100;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }}
         .msg-correct {{ background: #82c91e; color: white; box-shadow: 0 0 20px #82c91e; }}
+        .msg-wrong {{ background: #ff4b2b; color: white; box-shadow: 0 0 20px #ff4b2b; }}
         .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
+        .shake {{ animation: shake 0.3s ease-in-out; }}
+        @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-10px);}} 75% {{transform: translateX(10px);}} }}
+        #canvas {{ position: absolute; top: 0; left: 0; pointer-events: none; }}
     </style>
 </head>
 <body>
 <div class="game-card" id="card">
-    <div id="msg-overlay" class="msg-correct">CORRECT! ✨</div>
+    <canvas id="canvas"></canvas>
+    <div id="msg-overlay"></div>
     <h1 style="font-family: 'Arial Black'; margin:0; font-size: 24px;">ATOMIC ROW</h1>
-    <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
+    <p style="font-size:12px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
     <div class="tile-row" id="ans-row"></div>
     <div class="tile-row" id="pool-row"></div>
-    <button style="background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset ♻️</button>
 </div>
 
 <script>
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 340; canvas.height = 300;
+    let particles = [];
 
     function render() {{
         const ansRow = document.getElementById('ans-row');
@@ -82,47 +86,73 @@ game_html = f"""
             poolRow.appendChild(div);
         }});
 
-        if(answer.join('') === target) {{
-            document.getElementById('msg-overlay').classList.add('show-msg');
-        }} else {{
-            document.getElementById('msg-overlay').classList.remove('show-msg');
+        if(answer.length === target.length) {{
+            const msg = document.getElementById('msg-overlay');
+            if(answer.join('') === target) {{
+                msg.innerText = "STABILIZED! ✨";
+                msg.className = "msg-correct show-msg";
+                createExplosion();
+                // Send signal to Streamlit
+                setTimeout(() => {{ window.parent.postMessage({{type: 'streamlit:setComponentValue', value: true}}, '*'); }}, 500);
+            }} else {{
+                msg.innerText = "UNSTABLE! ❌";
+                msg.className = "msg-wrong show-msg";
+                document.getElementById('card').classList.add('shake');
+                setTimeout(() => {{ 
+                    msg.classList.remove('show-msg'); 
+                    document.getElementById('card').classList.remove('shake');
+                    answer = []; pool = target.split('').sort(() => Math.random() - 0.5);
+                    render();
+                }}, 1500);
+            }}
         }}
+    }}
+
+    function createExplosion() {{
+        for(let i=0; i<40; i++) {{
+            particles.push({{ x: 170, y: 150, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, color: `hsl(${{Math.random()*360}},70%,60%)`, s: Math.random()*4+2 }});
+        }}
+        animate();
+    }}
+
+    function animate() {{
+        if(particles.length === 0) return;
+        ctx.clearRect(0,0,340,300);
+        particles.forEach((p,i) => {{
+            p.x += p.vx; p.y += p.vy; p.vy += 0.2;
+            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.s,0,Math.PI*2); ctx.fill();
+            if(p.y > 300) particles.splice(i,1);
+        }});
+        requestAnimationFrame(animate);
     }}
 
     function addLetter(i) {{ if(answer.length < target.length) {{ answer.push(pool.splice(i, 1)[0]); render(); }} }}
     function removeLetter(i) {{ pool.push(answer.splice(i, 1)[0]); render(); }}
-    function resetGame() {{ answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render(); }}
     render();
 </script>
 </body>
 </html>
 """
 
-# 4. Render Game
-components.html(game_html, height=420)
+# 4. Render Game and Catch the Unlock Signal
+# components.declare_component or simple return value handling
+result = components.html(game_html, height=420)
 
-# 5. THE VERIFICATION ENGINE (Manual Step)
-st.write("---")
-# A small text input that acts as the "Verification"
-check_val = st.text_input("🧪 Verify Element Name to Proceed:", placeholder="Type answer here...")
-
-if check_val.upper() == target_word:
-    if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
-        st.session_state.lvl += 1
-        if st.session_state.lvl >= len(ELEMENTS):
-            st.session_state.lvl = 0
-            st.balloons()
-        st.rerun()
-else:
-    st.button("🔒 LEVEL LOCKED", disabled=True, use_container_width=True)
+# 5. THE DYNAMIC BUTTON
+# If the game sends 'true', the Next Level button appears automatically
+if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
+    st.session_state.lvl += 1
+    if st.session_state.lvl >= len(ELEMENTS):
+        st.session_state.lvl = 0
+    st.rerun()
 
 # 6. HOW TO PLAY
 st.markdown("""
-<div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333; margin-top: 10px;">
-    <h4 style="margin:0; color: #1a2a6c;">📖 How to Play:</h4>
-    <p style="font-size: 14px;">1. Tap letters to spell the element.<br>
-    2. Once you see <b>CORRECT!</b>, type the element name in the <b>Verify</b> box below.<br>
-    3. The <b>Next Level</b> button will appear instantly!</p>
+<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid #ddd; margin-top:10px;">
+    <h4 style="margin:0;">📖 Game Instructions:</h4>
+    <p style="font-size: 14px;">• Unscramble the letters to stabilize the element.<br>
+    • <b>Wrong:</b> The screen shakes and resets.<br>
+    • <b>Right:</b> Particles explode and you can proceed!</p>
 </div>
 """, unsafe_allow_html=True)
 
