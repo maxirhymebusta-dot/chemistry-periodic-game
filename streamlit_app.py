@@ -39,30 +39,36 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# --- HIDDEN TRIGGERS (ABSOLUTELY INVISIBLE) ---
+# --- THE GHOST SHIELD: ADVANCED CSS HIDING ---
 st.markdown("""
     <style>
-    div[data-testid="stButton"] button:has(div:contains("💣")),
-    div[data-testid="stButton"] button:has(div:contains("💖")) {
+    /* Completely remove the specific buttons from the visual flow */
+    button[kind="secondary"]:has(div:contains("💣")), 
+    button[kind="secondary"]:has(div:contains("💖")) {
         display: none !important;
+        opacity: 0 !important;
         position: absolute !important;
+        top: -9999px !important;
         left: -9999px !important;
-        visibility: hidden !important;
+        pointer-events: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-if st.button("💣"):
-    st.session_state.lives -= 1
-    if st.session_state.lives <= 0:
-        st.session_state.game_over = True
-    st.rerun()
+# These buttons act as internal "listeners" for the JavaScript
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("💣"):
+        st.session_state.lives -= 1
+        if st.session_state.lives <= 0:
+            st.session_state.game_over = True
+        st.rerun()
 
-if st.button("💖"):
-    st.session_state.lives += 2
-    st.rerun()
+with col2:
+    if st.button("💖"):
+        st.session_state.lives += 2
+        st.rerun()
 
-# Select the target element based on the randomized order
 target_word = st.session_state.order[st.session_state.lvl]
 
 # 3. THE GAME ENGINE
@@ -178,7 +184,6 @@ game_html = f"""
 if st.session_state.game_over:
     st.error("💀 GAME OVER! Depleted Hearts.")
     if st.button("♻️ RESTART NEW QUEST", use_container_width=True):
-        # Full reset including new shuffle
         all_keys = list(ELEMENTS_DB.keys())
         random.shuffle(all_keys)
         st.session_state.order = all_keys
@@ -196,7 +201,7 @@ else:
     if verify_text.upper() == target_word:
         final_data = ELEMENTS_DB[target_word]
         st.markdown(f"""
-        <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; color: #333;">
+        <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
             <div style="text-align: center; border-bottom: 2px solid #f39c12; margin-bottom: 15px;">
                 <h2 style="margin: 0; color: #2c3e50;">{target_word}</h2>
                 <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{final_data[4]}</span>
@@ -232,4 +237,3 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-    
