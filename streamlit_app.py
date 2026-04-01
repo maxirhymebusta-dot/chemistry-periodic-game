@@ -5,29 +5,30 @@ import random
 # 1. Page Config
 st.set_page_config(page_title="Atomic Row", layout="centered")
 
-# 2. Level Data & Encyclopedia Content
-ELEMENTS_DATA = {
-    "NEON": "A noble gas used in bright advertising signs. It is colorless and odorless but glows reddish-orange in a vacuum discharge tube.",
-    "BORON": "A versatile metalloid found in fiberglass and high-strength ceramics. It is essential for plant cell wall formation.",
-    "OXYGEN": "A highly reactive nonmetal that is essential for life on Earth. It makes up about 21% of our atmosphere.",
-    "SODIUM": "A soft, silvery-white, highly reactive alkali metal. It is a key component of common table salt (Sodium Chloride).",
-    "CARBON": "The 'King of Elements.' It forms the basis of all known life and exists as both soft graphite and hard diamond.",
-    "HELIUM": "The second lightest element in the universe. It is used in balloons and as a cooling agent for supermarket MRI scanners.",
-    "SILICON": "A hard, brittle crystalline solid. It is the heart of the computer industry, used to make semi-conductor chips.",
-    "LITHIUM": "The lightest metal on the periodic table. It is widely used today in rechargeable batteries for phones and electric cars.",
-    "SULPHUR": "A bright yellow nonmetal. It is essential for all living cells and is famously known for its 'rotten egg' smell when in compound form.",
-    "CHLORINE": "A yellow-green gas at room temperature. It is a powerful disinfectant used to keep swimming pools clean and safe.",
-    "FLUORINE": "The most reactive chemical element. Small amounts of its compounds are added to toothpaste to prevent cavities.",
-    "CALCIUM": "A dull grey alkali earth metal. It is the most abundant mineral in the human body, vital for strong bones and teeth."
+# 2. Comprehensive Element Database
+# Values are: (Atomic No, Mass No, Group, Period, Overview)
+ELEMENTS_DB = {
+    "NEON": (10, 20, 18, 2, "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
+    "BORON": (5, 11, 13, 2, "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
+    "OXYGEN": (8, 16, 16, 2, "A highly reactive nonmetal. Vital for respiration and combustion."),
+    "SODIUM": (11, 23, 1, 3, "A soft alkali metal. Highly reactive with water; found in common table salt."),
+    "CARBON": (6, 12, 14, 2, "The basis of organic chemistry. Exists as graphite, diamond, and coal."),
+    "HELIUM": (2, 4, 18, 1, "The second most abundant element. Used in balloons and cryogenics."),
+    "SILICON": (14, 28, 14, 3, "A semiconductor used in computer chips and solar cells."),
+    "LITHIUM": (3, 7, 1, 2, "Lightest metal. Crucial for high-density rechargeable batteries."),
+    "SULPHUR": (16, 32, 16, 3, "A yellow nonmetal used in gunpowder, matches, and sulfuric acid."),
+    "CHLORINE": (17, 35, 17, 3, "A toxic green gas used for water purification and disinfectants."),
+    "FLUORINE": (9, 19, 17, 2, "The most electronegative element. Used in toothpaste and refrigerants."),
+    "CALCIUM": (20, 40, 2, 4, "An alkaline earth metal vital for bones, teeth, and cellular functions.")
 }
 
-ELEMENT_LIST = list(ELEMENTS_DATA.keys())
+ELEMENT_LIST = list(ELEMENTS_DB.keys())
 
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE GAME ENGINE
+# 3. THE GAME ENGINE (Optimized for Mobile)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -142,15 +143,30 @@ game_html = f"""
 </html>
 """
 
-# 4. Render Game & Closing Gap
-components.html(game_html, height=290)
+# 4. Render Game
+components.html(game_html, height=280)
 
-st.markdown("<div style='margin-top: -10px;'>", unsafe_allow_html=True)
+# 5. DATA SHEET & VERIFICATION
+st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
 verify_text = st.text_input("🔬 Verify Element to Unlock:", placeholder="Type name here...", label_visibility="collapsed")
 
-# 5. DYNAMIC ENCYCLOPEDIA & PROGRESSION
 if verify_text.upper() == target_word:
-    st.success(f"**FACT:** {ELEMENTS_DATA[target_word]}")
+    data = ELEMENTS_DB[target_word]
+    
+    # Professional Data Sheet Table
+    st.markdown(f"""
+    <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid #82c91e; margin-bottom: 10px;">
+        <h4 style="color: #1a2a6c; margin-top:0;">📊 {target_word} DATA SHEET</h4>
+        <table style="width:100%; font-size:13px; text-align:left; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #eee;"><td><b>Atomic Number ($Z$):</b></td><td>{data[0]}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td><b>Mass Number ($A$):</b></td><td>{data[1]}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td><b>Group:</b></td><td>{data[2]}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td><b>Period:</b></td><td>{data[3]}</td></tr>
+        </table>
+        <p style="font-size: 13px; color: #555; margin-top:10px;"><b>Overview:</b> {data[4]}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
         st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
         st.rerun()
@@ -158,22 +174,26 @@ else:
     st.button("🔒 LEVEL LOCKED", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 6. ENHANCED HOW TO PLAY
+# 6. HOW TO PLAY (REWRITTEN & POLISHED)
 st.markdown("---")
 st.markdown("""
-<div style="background: linear-gradient(to bottom, #ffffff, #f0f2f6); padding: 20px; border-radius: 15px; border-left: 5px solid #1a2a6c; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
-    <h3 style="margin-top:0; color: #1a2a6c; font-family: sans-serif;">📖 How to Play</h3>
-    <p style="font-size: 14px; color: #444; line-height: 1.6;">
-        Welcome, Scientist! Your mission is to <b>Stabilize</b> scrambled chemical elements.
+<div style="background: #ffffff; padding: 18px; border-radius: 15px; border-left: 6px solid #1a2a6c; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <h3 style="margin-top:0; color: #1a2a6c; font-family: sans-serif; display: flex; align-items: center;">
+        <span style="font-size: 24px; margin-right: 10px;">📖</span> How to Play
+    </h3>
+    <p style="font-size: 14px; color: #333; line-height: 1.5;">
+        Welcome to the Atomic Lab. Follow these steps to complete your mission:
     </p>
-    <ol style="font-size: 14px; color: #444;">
-        <li><b>Identify:</b> Look at the scrambled letters in the <i>Letter Pool</i>.</li>
-        <li><b>Select:</b> Tap letters to move them into the <i>Atomic Slots</i> at the top.</li>
-        <li><b>Correct:</b> If you misplace a letter, tap it in the slots to send it back.</li>
-        <li><b>Verify:</b> Once the game says <b>STABILIZED</b>, type the name in the verification box to learn about that element and unlock the next level.</li>
-    </ol>
-    <p style="font-size: 12px; color: #777; font-style: italic;">Tip: Turn on the music for a focused laboratory atmosphere!</p>
+    <ul style="font-size: 14px; color: #444; padding-left: 20px;">
+        <li style="margin-bottom: 8px;"><b>1. Assemble:</b> Tap letters in the <b>Letter Pool</b> to fill the empty atomic slots at the top.</li>
+        <li style="margin-bottom: 8px;"><b>2. Edit:</b> If you make a mistake, tap a letter already in the <b>Atomic Slot</b> to return it to the pool.</li>
+        <li style="margin-bottom: 8px;"><b>3. Stabilize:</b> Once the correct element is spelled, the <b>STABILIZED</b> alert will trigger.</li>
+        <li style="margin-bottom: 8px;"><b>4. Discovery:</b> Type the element name into the verification box to generate its <b>Scientific Data Sheet</b> and unlock the next level.</li>
+    </ul>
+    <p style="font-size: 12px; color: #1a2a6c; font-weight: bold; background: #eef2ff; padding: 8px; border-radius: 5px; text-align: center;">
+        PRO TIP: Activate the 🎵 Theme for an immersive laboratory vibe!
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
