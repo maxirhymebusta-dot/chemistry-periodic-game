@@ -29,7 +29,7 @@ ELEMENTS_DB = {
     "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal essential for building strong bones and teeth.")
 }
 
-# --- RANDOMIZATION LOGIC ---
+# --- RANDOMIZATION & SESSION STATE ---
 if 'order' not in st.session_state:
     all_keys = list(ELEMENTS_DB.keys())
     random.shuffle(all_keys)
@@ -39,8 +39,9 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# --- UI LOGIC ---
-target_word = st.session_state.order[st.session_state.lvl]
+# Select target based on randomized order
+current_order = st.session_state.order
+target_word = current_order[st.session_state.lvl]
 
 # 3. THE GAME ENGINE
 game_html = f"""
@@ -68,7 +69,7 @@ game_html = f"""
         #msg-overlay {{
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
-            transition: 0.15s ease-in-out; pointer-events: none;
+            transition: 0.1s ease-in-out; pointer-events: none;
         }}
         .msg-correct {{ background: #f1c40f; color: #000; }}
         .msg-wrong {{ background: #e74c3c; color: white; }}
@@ -155,9 +156,7 @@ game_html = f"""
 if st.session_state.game_over:
     st.error("💀 GAME OVER! Depleted Hearts.")
     if st.button("♻️ RESTART NEW QUEST", use_container_width=True):
-        all_keys = list(ELEMENTS_DB.keys())
-        random.shuffle(all_keys)
-        st.session_state.order = all_keys
+        random.shuffle(st.session_state.order)
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -189,7 +188,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
-            st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
+            st.session_state.lvl = (st.session_state.lvl + 1) % len(current_order)
             st.rerun()
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
@@ -207,22 +206,23 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 7. THE HIDDEN ENGINE (AT THE VERY BOTTOM) ---
-# We put them in a tiny container and use CSS to shrink it to nothing.
-st.markdown("<div class='ghost-box'>", unsafe_allow_html=True)
+# --- 7. THE GHOST SHIELD: ABSOLUTE BARRIER ---
+# Hiding the logic buttons completely from sight and touch
 st.markdown("""
 <style>
 .ghost-box { 
     height: 0px !important; 
+    width: 0px !important;
     overflow: hidden !important; 
     opacity: 0 !important;
+    pointer-events: none !important;
 }
-button:has(div:contains("💣")), button:has(div:contains("💖")) {
-    height: 0px !important;
-    padding: 0px !important;
-    border: none !important;
+div[data-testid="stButton"] button:has(div:contains("💣")), 
+div[data-testid="stButton"] button:has(div:contains("💖")) {
+    display: none !important;
 }
 </style>
+<div class="ghost-box">
 """, unsafe_allow_html=True)
 
 if st.button("💣"):
