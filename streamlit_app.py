@@ -3,22 +3,23 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest: Stable", layout="centered")
+st.set_page_config(page_title="Atomic Quest: Elite", layout="centered")
 
-# 2. Element Database
+# 2. Comprehensive Element Database
+# Data: (Atomic No, Mass No, Group, Period, Symbol, Description)
 ELEMENTS_DB = {
-    "NEON": (10, 20, 18, 2, "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
-    "BORON": (5, 11, 13, 2, "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
-    "OXYGEN": (8, 16, 16, 2, "A highly reactive nonmetal. Vital for respiration and combustion."),
-    "SODIUM": (11, 23, 1, 3, "A soft alkali metal. Highly reactive with water; found in common table salt."),
-    "CARBON": (6, 12, 14, 2, "The basis of organic chemistry. Exists as graphite, diamond, and coal."),
-    "HELIUM": (2, 4, 18, 1, "The second most abundant element. Used in balloons and cryogenics."),
-    "SILICON": (14, 28, 14, 3, "A semiconductor used in computer chips and solar cells."),
-    "LITHIUM": (3, 7, 1, 2, "Lightest metal. Crucial for high-density rechargeable batteries."),
-    "SULPHUR": (16, 32, 16, 3, "A yellow nonmetal used in gunpowder, matches, and sulfuric acid."),
-    "CHLORINE": (17, 35, 17, 3, "A toxic green gas used for water purification and disinfectants."),
-    "FLUORINE": (9, 19, 17, 2, "The most electronegative element. Used in toothpaste and refrigerants."),
-    "CALCIUM": (20, 40, 2, 4, "An alkaline earth metal vital for bones, teeth, and cellular functions.")
+    "NEON": (10, 20, 18, 2, "Ne", "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
+    "BORON": (5, 11, 13, 2, "B", "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
+    "OXYGEN": (8, 16, 16, 2, "O", "A highly reactive nonmetal. Vital for respiration and combustion."),
+    "SODIUM": (11, 23, 1, 3, "Na", "A soft alkali metal. Highly reactive with water; found in common table salt."),
+    "CARBON": (6, 12, 14, 2, "C", "The basis of organic chemistry. Exists as graphite, diamond, and coal."),
+    "HELIUM": (2, 4, 18, 1, "He", "The second most abundant element. Used in balloons and cryogenics."),
+    "SILICON": (14, 28, 14, 3, "Si", "A semiconductor used in computer chips and solar cells."),
+    "LITHIUM": (3, 7, 1, 2, "Li", "Lightest metal. Crucial for high-density rechargeable batteries."),
+    "SULPHUR": (16, 32, 16, 3, "S", "A yellow nonmetal used in gunpowder, matches, and sulfuric acid."),
+    "CHLORINE": (17, 35, 17, 3, "Cl", "A toxic green gas used for water purification and disinfectants."),
+    "FLUORINE": (9, 19, 17, 2, "F", "The most electronegative element. Used in toothpaste and refrigerants."),
+    "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal vital for bones, teeth, and cellular functions.")
 }
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
@@ -27,6 +28,24 @@ ELEMENT_LIST = list(ELEMENTS_DB.keys())
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
+
+# HIDE THE INTERNAL BUTTON COMPLETELY USING CSS
+st.markdown("""
+    <style>
+    div[data-testid="stButton"] button:has(div:contains("INTERNAL_REDUCE")) {
+        display: none !important;
+        height: 0px !important;
+        width: 0px !important;
+        visibility: hidden !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+if st.button("INTERNAL_REDUCE"):
+    st.session_state.lives -= 1
+    if st.session_state.lives <= 0:
+        st.session_state.game_over = True
+    st.rerun()
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
@@ -58,8 +77,8 @@ game_html = f"""
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }}
-        .msg-correct {{ background: #f1c40f; color: #000; box-shadow: 0 0 15px #f1c40f; }}
-        .msg-wrong {{ background: #e74c3c; color: white; box-shadow: 0 0 15px #e74c3c; }}
+        .msg-correct {{ background: #f1c40f; color: #000; }}
+        .msg-wrong {{ background: #e74c3c; color: white; }}
         .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
         .shake {{ animation: shake 0.3s ease-in-out; }}
         @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-8px);}} 75% {{transform: translateX(8px);}} }}
@@ -102,8 +121,9 @@ game_html = f"""
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            document.getElementById('msg-overlay').innerText = "TIME EXPIRED! ⏳";
-            document.getElementById('msg-overlay').className = "msg-wrong show-msg";
+            const msg = document.getElementById('msg-overlay');
+            msg.innerText = "TIME EXPIRED! ⏳";
+            msg.className = "msg-wrong show-msg";
             setTimeout(() => {{ 
                 const btn = window.parent.document.querySelectorAll('button');
                 for (let b of btn) if(b.innerText.includes("INTERNAL_REDUCE")) b.click();
@@ -115,7 +135,6 @@ game_html = f"""
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
         ansRow.innerHTML = ""; poolRow.innerHTML = "";
-        
         for(let i=0; i<target.length; i++) {{
             let d = document.createElement('div'); d.className = 'tile';
             if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
@@ -123,14 +142,12 @@ game_html = f"""
             if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
             ansRow.appendChild(d);
         }}
-        
         pool.forEach((char, i) => {{
             let d = document.createElement('div'); d.className = 'tile'; d.innerText = char;
             if(timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); addLetter(i); }};
             poolRow.appendChild(d);
         }});
 
-        // IMMEDIATE CHECK LOGIC
         if(answer.length === target.length) {{
             const msg = document.getElementById('msg-overlay');
             if(answer.join('') === target) {{
@@ -139,16 +156,13 @@ game_html = f"""
                 msg.className = "msg-correct show-msg";
                 playSound(523, 'sine', 0.4);
             }} else {{
-                // WRONG POPUP SHOWS IMMEDIATELY
                 msg.innerText = "ERROR! 💀";
                 msg.className = "msg-wrong show-msg";
                 document.getElementById('card').classList.add('shake');
-                playSound(100, 'sawtooth', 0.3, 0.2);
-                
+                playSound(150, 'sawtooth', 0.3, 0.2);
                 setTimeout(() => {{ 
                     msg.classList.remove('show-msg'); 
                     document.getElementById('card').classList.remove('shake');
-                    // Reset slots so they can try again quickly
                     answer.forEach(char => pool.push(char));
                     answer = [];
                     render();
@@ -164,17 +178,9 @@ game_html = f"""
 </html>
 """
 
-# --- HIDDEN LIFE HANDLER ---
-st.markdown("<style>div[data-testid='stButton'] button:has(div:contains('INTERNAL_REDUCE')) { display: none; }</style>", unsafe_allow_html=True)
-if st.button("INTERNAL_REDUCE"):
-    st.session_state.lives -= 1
-    if st.session_state.lives <= 0:
-        st.session_state.game_over = True
-    st.rerun()
-
 # 4. Main App Logic
 if st.session_state.game_over:
-    st.error("💀 ALL HEARTS LOST! Your journey ends here.")
+    st.error("💀 GAME OVER! Your Hearts have run dry.")
     if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
@@ -184,16 +190,26 @@ else:
     components.html(game_html, height=260)
     st.write("---")
     
-    # 5. DATA SHEET
+    # 5. BEAUTIFIED DATA SHEET
     verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to reveal knowledge...", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
         d = ELEMENTS_DB[target_word]
         st.markdown(f"""
-        <div style="background: #fff; padding: 15px; border-radius: 12px; border: 2px solid #f39c12; color: #222;">
-            <h3 style="color: #2c3e50; margin: 0 0 10px 0; text-align: center;">🛡️ {target_word} DATA</h3>
-            <p style="font-size: 14px; margin: 4px 0;"><b>Atomic No:</b> {d[0]} | <b>Mass No:</b> {d[1]}</p>
-            <p style="font-size: 13px; color: #555; border-top: 1px solid #eee; padding-top: 5px;"><b>Lore:</b> {d[4]}</p>
+        <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
+            <div style="text-align: center; border-bottom: 2px solid #f39c12; margin-bottom: 15px;">
+                <h2 style="margin: 0; color: #2c3e50;">{target_word}</h2>
+                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{d[4]}</span>
+            </div>
+            <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
+                <div style="text-align: center;"><b>Atomic No ($Z$)</b><br><span style="font-size: 20px;">{d[0]}</span></div>
+                <div style="text-align: center;"><b>Mass No ($A$)</b><br><span style="font-size: 20px;">{d[1]}</span></div>
+            </div>
+            <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
+                <div style="text-align: center;"><b>Group</b><br>{d[2]}</div>
+                <div style="text-align: center;"><b>Period</b><br>{d[3]}</div>
+            </div>
+            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Scientific Overview:</b> {d[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
@@ -202,12 +218,19 @@ else:
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 
-# 6. HOW TO PLAY
+# 6. BEAUTIFIED HOW TO PLAY
+st.markdown("---")
 st.markdown("""
----
-### 📖 How to Play
-1. **Unscramble:** Tap letters in the inventory to fill the slots.
-2. **Speed:** You have **15 seconds** per element.
-3. **Wrong Answers:** If you fill the slots incorrectly, the card will shake and show **ERROR!**. Your letters will return to your inventory so you can try again.
-4. **Game Over:** If the timer hits zero, you lose a heart. Lose all three, and the game resets to Level 1.
-""")
+<div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
+    <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Manual: How to Play</h3>
+    <div style="font-size: 14px; line-height: 1.6;">
+        <p><b>1. Assemble the Atom:</b> Tap letters in your <i>Inventory</i> to fill the slots. You have <b>15 seconds</b> before your energy depletes!</p>
+        <p><b>2. Survival Mechanics:</b> If the timer hits <b>0</b>, you lose 1 Heart (❤️). Lose all 3, and your progress resets to Stage 1.</p>
+        <p><b>3. Unlock Knowledge:</b> Once stabilized, type the element's full name in the <i>Scroll of Truth</i> below to reveal its scientific properties.</p>
+        <p><b>4. Master Chemistry:</b> Study the Atomic Number, Mass, Group, and Period of each element to complete your MSc research!</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+
