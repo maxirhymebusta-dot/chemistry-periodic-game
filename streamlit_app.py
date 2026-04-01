@@ -3,47 +3,52 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Scramble", layout="centered")
+st.set_page_config(page_title="Atomic Quest", layout="centered")
 
-# 2. COMPLETE FIRST 20 ELEMENTS DATABASE
+# 2. Comprehensive Element Database
 ELEMENTS_DB = {
-    "HYDROGEN": (1, 1, 1, 1, "H", "The lightest element. It is flammable and usually exists as a diatomic gas (H2)."),
-    "HELIUM": (2, 4, 18, 1, "He", "A noble gas with a duplet structure. Non-reactive and used in weather balloons."),
-    "LITHIUM": (3, 7, 1, 2, "Li", "The lightest metal. An alkali metal used in high-performance batteries."),
-    "BERYLLIUM": (4, 9, 2, 2, "Be", "A hard, grey alkaline earth metal used in alloys for aircraft and spacecraft."),
-    "BORON": (5, 11, 13, 2, "B", "A metalloid used in heat-resistant glass (Pyrex). It has 3 valence electrons."),
-    "CARBON": (6, 12, 14, 2, "C", "A non-metal that shows allotropy (Diamond/Graphite). The basis of life."),
-    "NITROGEN": (7, 14, 15, 2, "N", "Makes up 78% of the atmosphere. Used in the production of fertilizers."),
-    "OXYGEN": (8, 16, 16, 2, "O", "Essential for respiration and combustion. It is a diatomic non-metal."),
-    "FLUORINE": (9, 19, 17, 2, "F", "The most electronegative and reactive non-metal. Used in toothpaste."),
-    "NEON": (10, 20, 18, 2, "Ne", "A noble gas with a stable octet. Used in bright reddish-orange neon signs."),
-    "SODIUM": (11, 23, 1, 3, "Na", "A soft alkali metal. Highly reactive with water; stored under paraffin oil."),
-    "MAGNESIUM": (12, 24, 2, 3, "Mg", "Burns with a brilliant white flame. Used in fireworks and flashbulbs."),
-    "ALUMINIUM": (13, 27, 13, 3, "Al", "A lightweight metal that does not corrode easily. Used for kitchen foil."),
-    "SILICON": (14, 28, 14, 3, "Si", "A metalloid used as a semiconductor in computer chips and solar cells."),
-    "PHOSPHORUS": (15, 31, 15, 3, "P", "A reactive non-metal used in the manufacture of matches and fertilizers."),
-    "SULPHUR": (16, 32, 16, 3, "S", "A yellow non-metal used to vulcanize rubber and produce sulphuric acid."),
-    "CHLORINE": (17, 35.5, 17, 3, "Cl", "A greenish-yellow poisonous halogen gas used to disinfect water."),
-    "ARGON": (18, 40, 18, 3, "Ar", "A noble gas used in electric light bulbs to prevent the filament from burning."),
-    "POTASSIUM": (19, 39, 1, 4, "K", "A very reactive alkali metal. Its compounds are vital for plant growth."),
-    "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal essential for building strong bones and teeth.")
+    "NEON": (10, 20, 18, 2, "Ne", "A noble gas with a stable octet structure. It does not react because its outer shell is full."),
+    "BORON": (5, 11, 13, 2, "B", "A metalloid used in heat-resistant glass. It has 3 electrons in its valence shell."),
+    "OXYGEN": (8, 16, 16, 2, "O", "A non-metal essential for respiration. It is diatomic (O2) and highly electronegative."),
+    "SODIUM": (11, 23, 1, 3, "Na", "A highly reactive alkali metal. It is stored in oil to prevent reaction with air or moisture."),
+    "CARBON": (6, 12, 14, 2, "C", "A non-metal that shows allotropy (Diamond and Graphite). It is the basis of organic chemistry."),
+    "HELIUM": (2, 4, 18, 1, "He", "A noble gas with a duplet structure. It is used in weather balloons because it is very light."),
+    "SILICON": (14, 28, 14, 3, "Si", "The second most abundant element in the Earth's crust. Used extensively in electronics."),
+    "LITHIUM": (3, 7, 1, 2, "Li", "The lightest metal. It belongs to the Alkali Metal family in Group 1."),
+    "SULPHUR": (16, 32, 16, 3, "S", "A yellow non-metal found in Group 16. It is used to vulcanize rubber and make matches."),
+    "CHLORINE": (17, 35.5, 17, 3, "Cl", "A halogen gas. It is a strong oxidizing agent used in water treatment to kill germs."),
+    "FLUORINE": (9, 19, 17, 2, "F", "The most reactive non-metal. It has the highest electronegativity on the periodic table."),
+    "CALCIUM": (20, 40, 2, 4, "Ca", "An alkaline earth metal. It is vital for the formation of strong bones and teeth.")
 }
 
-# --- RANDOMIZATION & SESSION STATE ---
-if 'order' not in st.session_state:
-    all_keys = list(ELEMENTS_DB.keys())
-    random.shuffle(all_keys)
-    st.session_state.order = all_keys
+ELEMENT_LIST = list(ELEMENTS_DB.keys())
 
+# --- SESSION STATE MANAGEMENT ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# Select target based on randomized order
-current_order = st.session_state.order
-target_word = current_order[st.session_state.lvl]
+# HIDE THE INTERNAL TRIGGER BUTTON
+st.markdown("""
+    <style>
+    div[data-testid="stButton"] button:has(div:contains("💣")) {
+        display: none !important;
+        height: 0px !important;
+        width: 0px !important;
+        visibility: hidden !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 3. THE GAME ENGINE
+if st.button("💣"):
+    st.session_state.lives -= 1
+    if st.session_state.lives <= 0:
+        st.session_state.game_over = True
+    st.rerun()
+
+target_word = ELEMENT_LIST[st.session_state.lvl]
+
+# 3. THE GAME ENGINE (FAST POPUPS)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -83,8 +88,7 @@ game_html = f"""
         <span id="lives-display">❤️ × {st.session_state.lives}</span>
         <span id="timer">60</span>
     </div>
-    <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC SCRAMBLE</h2>
-    <p style="font-size: 10px; opacity:0.6;">STAGE {st.session_state.lvl + 1} OF 20</p>
+    <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC QUEST</h2>
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
@@ -96,10 +100,15 @@ game_html = f"""
     let answer = [];
     let timeLeft = 60;
     let timerActive = true;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function triggerPython(icon) {{
-        const btn = window.parent.document.querySelectorAll('button');
-        for (let b of btn) if(b.innerText.includes(icon)) b.click();
+    function playSound(f, t, d, v=0.1) {{
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+        g.gain.setValueAtTime(v, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + d);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + d);
     }}
 
     const timerInterval = setInterval(() => {{
@@ -109,7 +118,10 @@ game_html = f"""
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            triggerPython("💣");
+            setTimeout(() => {{ 
+                const btn = window.parent.document.querySelectorAll('button');
+                for (let b of btn) if(b.innerText.includes("💣")) b.click();
+            }}, 500);
         }}
     }}, 1000);
 
@@ -121,12 +133,12 @@ game_html = f"""
             let d = document.createElement('div'); d.className = 'tile';
             if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
             d.innerText = answer[i] || "?";
-            if(answer[i] && timerActive) d.onclick = () => removeLetter(i);
+            if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
             ansRow.appendChild(d);
         }}
         pool.forEach((char, i) => {{
             let d = document.createElement('div'); d.className = 'tile'; d.innerText = char;
-            if(timerActive) d.onclick = () => addLetter(i);
+            if(timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); addLetter(i); }};
             poolRow.appendChild(d);
         }});
 
@@ -134,13 +146,20 @@ game_html = f"""
             const msg = document.getElementById('msg-overlay');
             if(answer.join('') === target) {{
                 timerActive = false;
-                msg.innerText = "+2 ❤️ BONUS!";
+                msg.innerText = "STABILIZED! 🏆";
                 msg.className = "msg-correct show-msg";
-                setTimeout(() => {{ triggerPython("💖"); }}, 500);
+                playSound(523, 'sine', 0.4);
+                setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 400);
             }} else {{
-                msg.innerText = "-1 ❤️ PENALTY!";
+                msg.innerText = "ERROR! 💀";
                 msg.className = "msg-wrong show-msg";
-                setTimeout(() => {{ triggerPython("💣"); }}, 500);
+                playSound(150, 'sawtooth', 0.2);
+                setTimeout(() => {{ 
+                    msg.classList.remove('show-msg'); 
+                    answer.forEach(char => pool.push(char));
+                    answer = [];
+                    render();
+                }}, 400);
             }}
         }}
     }}
@@ -152,11 +171,10 @@ game_html = f"""
 </html>
 """
 
-# 4. App Logic
+# 4. Main App Logic
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Depleted Hearts.")
-    if st.button("♻️ RESTART NEW QUEST", use_container_width=True):
-        random.shuffle(st.session_state.order)
+    st.error("💀 GAME OVER! Your Hearts have run dry.")
+    if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -169,6 +187,7 @@ else:
     verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type in the element name to unlock level", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
+        # Consistency Check: Using 'final_data' to avoid naming conflicts
         final_data = ELEMENTS_DB[target_word]
         st.markdown(f"""
         <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
@@ -188,7 +207,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
-            st.session_state.lvl = (st.session_state.lvl + 1) % len(current_order)
+            st.session_state.lvl = (st.session_state.lvl + 1) % len(ELEMENT_LIST)
             st.rerun()
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
@@ -199,40 +218,12 @@ st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
     <h3 style="margin-top:0; color: #f39c12;">📖 How to Play</h3>
     <div style="font-size: 14px; line-height: 1.6;">
-        <p><b>1. Randomized Quest:</b> The elements appear in a different random order every time you play!</p>
-        <p><b>2. Life Rewards:</b> Solving the puzzle grants <b>+2 ❤️ Bonus</b>. Wrong guesses or timeouts result in <b>-1 ❤️ Penalty</b>.</p>
-        <p><b>3. Study the Atom:</b> Study the Atomic Number ($Z$) and Mass Number ($A$) carefully to master SS1 Chemistry.</p>
+        <p><b>1. Master the Symbols:</b> Use your chemistry knowledge to unscramble the element name within <b>60 seconds</b>.</p>
+        <p><b>2. Life Management:</b> If the <b>💣</b> triggers (timer hits zero), you lose 1 Heart. Protect your 3 Hearts to reach the final level.</p>
+        <p><b>3. Periodic Law:</b> Once you stabilize an element, check the <i>Scroll of Truth</i>. Study the <b>Atomic Number</b> (protons) and <b>Mass Number</b> (protons + neutrons) carefully.</p>
+        <p><b>4. Master Chemistry:</b> Focus on the <b>Group</b> (valence electrons) and <b>Period</b> (number of shells) to master the periodic table!</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 7. THE GHOST SHIELD: ABSOLUTE BARRIER ---
-# Hiding the logic buttons completely from sight and touch
-st.markdown("""
-<style>
-.ghost-box { 
-    height: 0px !important; 
-    width: 0px !important;
-    overflow: hidden !important; 
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-div[data-testid="stButton"] button:has(div:contains("💣")), 
-div[data-testid="stButton"] button:has(div:contains("💖")) {
-    display: none !important;
-}
-</style>
-<div class="ghost-box">
-""", unsafe_allow_html=True)
-
-if st.button("💣"):
-    st.session_state.lives -= 1
-    if st.session_state.lives <= 0: st.session_state.game_over = True
-    st.rerun()
-
-if st.button("💖"):
-    st.session_state.lives += 2
-    st.rerun()
-
-st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
