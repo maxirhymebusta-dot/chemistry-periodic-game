@@ -2,82 +2,73 @@ import streamlit as st
 import random
 import time
 
-# 1. Game Setup & Styling
-st.set_page_config(page_title="Atomic Collector", layout="centered")
-
+# 1. Visual Styling
+st.set_page_config(page_title="Element Reactor", layout="centered")
 st.markdown("""
 <style>
-    .game-container {
-        height: 400px; width: 100%; border: 3px solid #82c91e;
-        position: relative; background-color: #111; overflow: hidden;
-        border-radius: 15px; margin-bottom: 20px;
+    .main { background-color: #0e1117; }
+    .reactor-core {
+        text-align: center; padding: 20px;
+        background: #1e1e1e; border: 4px solid #82c91e;
+        border-radius: 50%; width: 200px; height: 200px;
+        margin: 0 auto; display: flex; align-items: center;
+        justify-content: center; color: #82c91e;
+        box-shadow: 0 0 20px #82c91e; font-size: 24px; font-weight: 800;
     }
-    .element-bubble {
-        position: absolute; width: 50px; height: 50px;
-        background-color: #82c91e; color: white;
-        border-radius: 50%; display: flex; align-items: center;
-        justify-content: center; font-weight: bold; font-size: 20px;
-        cursor: pointer; box-shadow: 0 0 10px #82c91e;
+    .stButton>button {
+        height: 80px !important; font-size: 22px !important;
+        border-radius: 15px !important; background-color: #262730 !important;
+        color: white !important; border: 2px solid #444 !important;
     }
-    .target-box {
-        text-align: center; padding: 20px; background: #f1f3f5;
-        border-radius: 10px; font-size: 24px; font-weight: bold;
-        color: #2b8a3e; border: 2px dashed #82c91e;
-    }
+    .stButton>button:hover { border-color: #82c91e !important; color: #82c91e !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Data: First 20 Elements
+# 2. Data: The First 20 Elements
 ELEMENTS = [
     {"s": "H", "n": "Hydrogen"}, {"s": "He", "n": "Helium"}, {"s": "Li", "n": "Lithium"},
     {"s": "Be", "n": "Beryllium"}, {"s": "B", "n": "Boron"}, {"s": "C", "n": "Carbon"},
     {"s": "N", "n": "Nitrogen"}, {"s": "O", "n": "Oxygen"}, {"s": "F", "n": "Fluorine"},
-    {"s": "Ne", "n": "Neon"}, {"s": "Na", "n": "Sodium"}, {"s": "Mg", "n": "Magnesium"}
+    {"s": "Ne", "n": "Neon"}, {"s": "Na", "n": "Sodium"}, {"s": "Mg", "n": "Magnesium"},
+    {"s": "Al", "n": "Aluminium"}, {"s": "Si", "n": "Silicon"}, {"s": "P", "n": "Phosphorus"},
+    {"s": "S", "n": "Sulphur"}, {"s": "Cl", "n": "Chlorine"}, {"s": "Ar", "n": "Argon"},
+    {"s": "K", "n": "Potassium"}, {"s": "Ca", "n": "Calcium"}
 ]
 
-# 3. Session State for Game Logic
+# 3. Game State
 if 'score' not in st.session_state: st.session_state.score = 0
 if 'target' not in st.session_state: st.session_state.target = random.choice(ELEMENTS)
-if 'lives' not in st.session_state: st.session_state.lives = 3
+if 'level' not in st.session_state: st.session_state.level = 1
 
-# 4. UI Header
-st.title("🚀 Atomic Collector")
-c1, c2 = st.columns(2)
-with c1: st.subheader(f"🏆 Score: {st.session_state.score}")
-with c2: st.subheader(f"❤️ Lives: {st.session_state.lives}")
+# 4. Interface
+st.markdown(f"<p style='text-align:right; color:#82c91e;'>Score: {st.session_state.score}</p>", unsafe_allow_html=True)
 
-# 5. THE TARGET AREA
-st.markdown(f"<div class='target-box'>TARGET: CATCH {st.session_state.target['n'].upper()}</div>", unsafe_allow_html=True)
-st.write(" ")
+# The Reactor Core (Shows the target name)
+st.markdown(f"<div class='reactor-core'>{st.session_state.target['n'].upper()}</div>", unsafe_allow_html=True)
+st.write("---")
 
-# 6. THE GAME GRID (Action Area)
-# We show 4 random options. The student must click the correct symbol.
+# The Blaster Options (Symbols)
+# Pick 4 random symbols, ensuring the correct one is included
 options = random.sample(ELEMENTS, 3)
 if st.session_state.target not in options:
-    options.append(st.session_state.target)
+    options[0] = st.session_state.target
 random.shuffle(options)
 
-# Displaying as "Floating Bubbles" using columns
-cols = st.columns(4)
+st.write("### ⚡ BLAST THE CORRECT SYMBOL!")
+col1, col2 = st.columns(2)
+
 for i, opt in enumerate(options):
-    with cols[i]:
-        if st.button(opt['s'], key=f"opt_{i}_{opt['s']}", use_container_width=True):
+    with col1 if i < 2 else col2:
+        if st.button(opt['s'], key=f"btn_{opt['s']}", use_container_width=True):
             if opt['s'] == st.session_state.target['s']:
-                st.session_state.score += 50
-                st.balloons()
-                st.toast(f"Great Catch! {opt['s']} is {opt['n']}", icon="🧪")
+                st.session_state.score += 100
+                st.toast("🎯 DIRECT HIT!", icon="🚀")
                 st.session_state.target = random.choice(ELEMENTS)
                 st.rerun()
             else:
-                st.session_state.lives -= 1
-                st.error("Wrong Element!")
-                if st.session_state.lives <= 0:
-                    st.warning("REACTOR OVERLOAD! Game Over.")
-                    time.sleep(2)
-                    st.session_state.score = 0
-                    st.session_state.lives = 3
-                    st.rerun()
+                st.error("MISSED! -50 Energy")
+                st.session_state.score -= 50
+                st.rerun()
 
-# 7. Progress through the shells
-st.write("---")
-st.markdown("<p style='text-align: center; color: grey;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+# 5. Footer
+st.markdown("<br><p style='text-align: center; color: #555;'>MSc Project: Periodic Master | Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
