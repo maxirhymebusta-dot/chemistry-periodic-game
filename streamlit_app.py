@@ -6,7 +6,6 @@ import random
 st.set_page_config(page_title="Atomic Quest: Elite", layout="centered")
 
 # 2. Comprehensive Element Database
-# Data: (Atomic No, Mass No, Group, Period, Symbol, Description)
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "Ne", "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
     "BORON": (5, 11, 13, 2, "B", "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
@@ -29,14 +28,18 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# HIDE THE INTERNAL BUTTON COMPLETELY USING CSS
+# UPDATED CSS: Targets the button container even more strictly
 st.markdown("""
     <style>
-    div[data-testid="stButton"] button:has(div:contains("INTERNAL_REDUCE")) {
+    /* Hides the internal button and its container entirely */
+    button[kind="secondary"] {
+        display: none !important;
+    }
+    div[data-testid="stVerticalBlock"] > div:has(button:contains("INTERNAL_REDUCE")) {
         display: none !important;
         height: 0px !important;
-        width: 0px !important;
-        visibility: hidden !important;
+        margin: 0px !important;
+        padding: 0px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -140,7 +143,7 @@ game_html = f"""
             if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
             d.innerText = answer[i] || "?";
             if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
-            ansRow.appendChild(d);
+            ansRow.appendChild(div);
         }}
         pool.forEach((char, i) => {{
             let d = document.createElement('div'); d.className = 'tile'; d.innerText = char;
@@ -190,7 +193,7 @@ else:
     components.html(game_html, height=260)
     st.write("---")
     
-    # 5. BEAUTIFIED DATA SHEET
+    # 5. DATA SHEET
     verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name to reveal knowledge...", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
@@ -202,14 +205,14 @@ else:
                 <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{d[4]}</span>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                <div style="text-align: center;"><b>Atomic No ($Z$)</b><br><span style="font-size: 20px;">{d[0]}</span></div>
-                <div style="text-align: center;"><b>Mass No ($A$)</b><br><span style="font-size: 20px;">{d[1]}</span></div>
+                <div style="text-align: center;"><b>Atomic No</b><br><span style="font-size: 20px;">{d[0]}</span></div>
+                <div style="text-align: center;"><b>Mass No</b><br><span style="font-size: 20px;">{d[1]}</span></div>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
                 <div style="text-align: center;"><b>Group</b><br>{d[2]}</div>
                 <div style="text-align: center;"><b>Period</b><br>{d[3]}</div>
             </div>
-            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Scientific Overview:</b> {d[5]}</p>
+            <p style="font-size: 13px; line-height: 1.6; color: #555;"><b>Overview:</b> {d[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
@@ -218,19 +221,17 @@ else:
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 
-# 6. BEAUTIFIED HOW TO PLAY
+# 6. HOW TO PLAY
 st.markdown("---")
 st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
-    <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Manual: How to Play</h3>
+    <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Manual</h3>
     <div style="font-size: 14px; line-height: 1.6;">
-        <p><b>1. Assemble the Atom:</b> Tap letters in your <i>Inventory</i> to fill the slots. You have <b>15 seconds</b> before your energy depletes!</p>
-        <p><b>2. Survival Mechanics:</b> If the timer hits <b>0</b>, you lose 1 Heart (❤️). Lose all 3, and your progress resets to Stage 1.</p>
-        <p><b>3. Unlock Knowledge:</b> Once stabilized, type the element's full name in the <i>Scroll of Truth</i> below to reveal its scientific properties.</p>
-        <p><b>4. Master Chemistry:</b> Study the Atomic Number, Mass, Group, and Period of each element to complete your MSc research!</p>
+        <p><b>1. Assemble the Atom:</b> Tap letters to fill the slots within <b>15 seconds</b>.</p>
+        <p><b>2. Survival:</b> If the timer hits <b>0</b>, you lose 1 Heart (❤️). Lose all 3, and you reset to Level 1.</p>
+        <p><b>3. Unlock:</b> Once stabilized, type the name in the <i>Scroll of Truth</i> below to reveal the data.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-
