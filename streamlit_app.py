@@ -1,101 +1,96 @@
 import streamlit as st
 import random
 
-# 1. Page Setup & Jigsaw Styling
-st.set_page_config(page_title="Atomic Jigsaw", layout="centered")
+# 1. Page Config & Professional Styling
+st.set_page_config(page_title="Atomic Unscrambler", layout="centered")
 
 st.markdown("""
 <style>
-    /* Puzzle Tile Styling */
-    .puzzle-tile {
-        height: 70px; display: flex; align-items: center; justify-content: center;
-        background-color: #ffffff; border: 2px solid #82c91e;
-        border-radius: 10px; font-weight: 800; font-size: 18px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #333;
+    .letter-btn {
+        margin: 5px; font-size: 20px !important; font-weight: bold !important;
+        height: 50px; width: 50px; border-radius: 10px !important;
+        border: 2px solid #82c91e !important; background-color: #ffffff;
     }
-    .selected-tile { background-color: #a5d8ff !important; border-color: #1971c2 !important; }
-    .correct-row { background-color: #b2f2bb !important; border-color: #2b8a3e !important; }
+    .slot-btn {
+        margin: 5px; font-size: 20px !important; font-weight: bold !important;
+        height: 50px; width: 50px; border-radius: 10px !important;
+        border: 2px dashed #1971c2 !important; background-color: #f0f7ff;
+        color: #1971c2;
+    }
     .header-text { text-align: center; color: #2b8a3e; margin-bottom: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Data for the Puzzle (First 20 Elements)
-ELEMENTS = [
-    {"num": "1", "sym": "H", "name": "Hydrogen"},
-    {"num": "2", "sym": "He", "name": "Helium"},
-    {"num": "3", "sym": "Li", "name": "Lithium"},
-    {"num": "4", "sym": "Be", "name": "Beryllium"},
-    {"num": "5", "sym": "B", "name": "Boron"}
+# 2. Data: First 20 Elements (Ordered by Difficulty)
+ELEMENT_LIST = [
+    "NEON", "BORON", "HELIUM", "OXYGEN", "SODIUM", "CARBON", 
+    "SULPHUR", "LITHIUM", "SILICON", "CHLORINE", "FLUORINE", 
+    "ALUMINIUM", "MAGNESIUM", "POTASSIUM", "BERYLLIUM", "PHOSPHORUS"
 ]
 
-# 3. Initialize Game State
-if 'board' not in st.session_state:
-    # Create a scrambled list of all pieces
-    nums = [e['num'] for e in ELEMENTS]
-    syms = [e['sym'] for e in ELEMENTS]
-    names = [e['name'] for e in ELEMENTS]
-    random.shuffle(nums); random.shuffle(syms); random.shuffle(names)
-    st.session_state.board = {"nums": nums, "syms": syms, "names": names}
+# 3. Game State Management
+if 'lvl' not in st.session_state: st.session_state.lvl = 0
+if 'scrambled' not in st.session_state: 
+    word = ELEMENT_LIST[st.session_state.lvl]
+    s_list = list(word)
+    random.shuffle(s_list)
+    st.session_state.scrambled = s_list
+if 'answer' not in st.session_state: st.session_state.answer = []
 
-if 'selected' not in st.session_state: st.session_state.selected = None # (column, index)
+# 4. UI Header
+st.markdown(f"<h2 class='header-text'>🔬 Level {st.session_state.lvl + 1}: Unscramble the Element</h2>", unsafe_allow_html=True)
+st.write(f"**Target:** {len(ELEMENT_LIST[st.session_state.lvl])} Letters")
 
-# 4. Game UI
-st.markdown("<h2 class='header-text'>🧩 THE ATOMIC JIGSAW</h2>", unsafe_allow_html=True)
-st.write("Tap two tiles in the same column to swap them. Align the rows correctly!")
+# 5. THE ANSWER SLOTS (Where letters go when tapped)
+st.markdown("### Your Answer")
+cols_ans = st.columns(10)
+for i in range(len(ELEMENT_LIST[st.session_state.lvl])):
+    with cols_ans[i]:
+        char = st.session_state.answer[i] if i < len(st.session_state.answer) else ""
+        if st.button(char, key=f"ans_{i}"):
+            if char != "": # If they tap a filled slot, remove the letter
+                st.session_state.scrambled.append(st.session_state.answer.pop(i))
+                st.rerun()
 
-# 5. The Puzzle Grid
-cols = st.columns(3)
-column_keys = ["nums", "syms", "names"]
-column_titles = ["Atomic #", "Symbol", "Name"]
-
-for i, col_key in enumerate(column_keys):
-    with cols[i]:
-        st.markdown(f"<p style='text-align:center; font-weight:bold;'>{column_titles[i]}</p>", unsafe_allow_html=True)
-        for idx, val in enumerate(st.session_state.board[col_key]):
-            # Check if this row is already correct
-            is_correct = (
-                st.session_state.board["nums"][idx] == ELEMENTS[idx]["num"] and
-                st.session_state.board["syms"][idx] == ELEMENTS[idx]["sym"] and
-                st.session_state.board["names"][idx] == ELEMENTS[idx]["name"]
-            )
-            
-            # Check if selected
-            is_sel = st.session_state.selected == (col_key, idx)
-            
-            # Button Logic
-            tile_style = "correct-row" if is_correct else ("selected-tile" if is_sel else "")
-            
-            if st.button(val, key=f"{col_key}_{idx}", use_container_width=True):
-                if st.session_state.selected is None:
-                    st.session_state.selected = (col_key, idx)
-                    st.rerun()
-                else:
-                    prev_col, prev_idx = st.session_state.selected
-                    if prev_col == col_key: # Only swap within the same column
-                        # Swap values
-                        st.session_state.board[col_key][prev_idx], st.session_state.board[col_key][idx] = \
-                            st.session_state.board[col_key][idx], st.session_state.board[col_key][prev_idx]
-                        st.session_state.selected = None
-                        st.rerun()
-                    else:
-                        st.session_state.selected = (col_key, idx)
-                        st.rerun()
-
-# 6. Check Win Condition
-all_correct = True
-for idx in range(len(ELEMENTS)):
-    if not (st.session_state.board["nums"][idx] == ELEMENTS[idx]["num"] and
-            st.session_state.board["syms"][idx] == ELEMENTS[idx]["sym"] and
-            st.session_state.board["names"][idx] == ELEMENTS[idx]["name"]):
-        all_correct = False
-
-if all_correct:
-    st.balloons()
-    st.success("🏆 ATOM STABILIZED! Level Complete.")
-    if st.button("Next Level"):
-        st.session_state.clear()
-        st.rerun()
-
+# 6. THE SCRAMBLED LETTERS (The pool to pick from)
 st.write("---")
-st.markdown("<p style='text-align: center; color: #999;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-    
+st.markdown("### Scrambled Pool")
+cols_pool = st.columns(10)
+for i, char in enumerate(st.session_state.scrambled):
+    with cols_pool[i % 10]:
+        if st.button(char, key=f"pool_{i}_{char}"):
+            st.session_state.answer.append(char)
+            st.session_state.scrambled.pop(i)
+            st.rerun()
+
+# 7. WIN LOGIC
+current_word = "".join(st.session_state.answer)
+target_word = ELEMENT_LIST[st.session_state.lvl]
+
+if current_word == target_word:
+    st.balloons()
+    st.success(f"✅ Correct! It's {target_word}!")
+    if st.button("NEXT LEVEL 🚀"):
+        st.session_state.lvl += 1
+        if st.session_state.lvl < len(ELEMENT_LIST):
+            # Reset for next level
+            next_word = ELEMENT_LIST[st.session_state.lvl]
+            s_list = list(next_word)
+            random.shuffle(s_list)
+            st.session_state.scrambled = s_list
+            st.session_state.answer = []
+            st.rerun()
+        else:
+            st.success("🏆 YOU COMPLETED ALL LEVELS!")
+
+# 8. Footer
+st.write("---")
+if st.button("Reset Level ♻️"):
+    st.session_state.answer = []
+    word = ELEMENT_LIST[st.session_state.lvl]
+    s_list = list(word)
+    random.shuffle(s_list)
+    st.session_state.scrambled = s_list
+    st.rerun()
+
+st.markdown("<p style='text-align: center; color: grey;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
