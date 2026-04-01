@@ -1,84 +1,142 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-# 1. CSS for Selection and Highlights
-st.markdown("""
-<style>
-    .stApp { background-color: #ffffff; }
-    .word-header {
-        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-        background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;
-    }
-    .tag-found { text-decoration: line-through; color: #adb5bd; font-weight: bold; }
-    .tag-pending { color: #333; font-weight: bold; }
+# 1. Page Setup
+st.set_page_config(page_title="Chemical Grid Master", layout="centered")
 
-    /* The Grid Layout */
-    .grid-container {
-        display: grid; grid-template-columns: repeat(10, 1fr);
-        gap: 5px; max-width: 350px; margin: 0 auto;
-    }
+st.markdown("<h2 style='text-align: center; color: #2b8a3e;'>🧪 FIRST 20 ELEMENTS: LABORATORY GRID</h2>", unsafe_allow_html=True)
+st.write("Tap letters to build the element name. Correct matches will highlight green!")
+
+# 2. THE GAME ENGINE (HTML + CSS + JAVASCRIPT)
+game_html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: white; }
+        
+        /* THE GRID: Forced 10x10 Square */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(10, 35px); 
+            gap: 5px; 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+        }
+        
+        .cell { 
+            width: 35px; height: 35px; 
+            display: flex; align-items: center; justify-content: center; 
+            background: white; border: 1px solid #eee; 
+            font-weight: 800; font-size: 18px; cursor: pointer; 
+            user-select: none; border-radius: 4px;
+        }
+
+        /* Selection & Found Colors */
+        .selected { background-color: #a5d8ff !important; color: #1971c2; }
+        .found { background-color: #b2f2bb !important; color: #2b8a3e; border-radius: 50%; }
+
+        .word-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .word-item { font-size: 12px; font-weight: bold; color: #333; text-transform: uppercase; }
+        .crossed { text-decoration: line-through; color: #ccc; }
+        
+        .controls { margin-top: 20px; display: flex; gap: 10px; }
+        button.action { padding: 10px 20px; border-radius: 20px; border: none; background: #82c91e; color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="word-list" id="wordList"></div>
     
-    /* Letter Button Styling */
-    .stButton>button {
-        width: 35px !important; height: 35px !important;
-        padding: 0px !important; font-size: 18px !important;
-        font-weight: 900 !important; border-radius: 50% !important;
-        border: 1px solid #eee !important; background-color: white !important;
-        color: #333 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+    <div class="grid" id="gridBoard"></div>
 
-# 2. DATA (First 20 Elements)
-ELEMENTS = ["HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN"]
+    <div style="margin-top:15px; font-weight:bold; color:#1971c2;">Selection: <span id="currentVal">---</span></div>
 
-GRID_DATA = [
-    "B O X Y G E N N N N", "L E A P T U E C I I", "O S R B Z G I A T T", 
-    "Z H W Y O J W R R R", "U R E R L R I B O O", "E B D L A L O O G G", 
-    "I Y M U I I I N E E", "H B R U D U H U N N", "L I T H I U M L M M", 
-    "C A L C I U M X Y Z"
-]
+    <div class="controls">
+        <button class="action" onclick="checkWord()">Check Selection</button>
+        <button class="action" style="background:#fa5252;" onclick="resetSelection()">Clear</button>
+    </div>
 
-# 3. SESSION STATE
-if 'found' not in st.session_state: st.session_state.found = []
-if 'selection' not in st.session_state: st.session_state.selection = ""
+    <script>
+        const elements = ["HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN"];
+        const gridData = [
+            "B", "O", "X", "Y", "G", "E", "N", "N", "N", "N",
+            "L", "E", "A", "P", "T", "U", "E", "C", "I", "I",
+            "O", "S", "R", "B", "Z", "G", "I", "A", "T", "T",
+            "Z", "H", "W", "Y", "O", "J", "W", "R", "R", "R",
+            "U", "R", "E", "R", "L", "R", "I", "B", "O", "O",
+            "E", "B", "D", "L", "A", "L", "O", "O", "G", "G",
+            "I", "Y", "M", "U", "I", "I", "I", "N", "E", "E",
+            "H", "B", "R", "U", "D", "U", "H", "U", "N", "N",
+            "L", "I", "T", "H", "I", "U", "M", "L", "M", "M",
+            "C", "A", "L", "C", "I", "U", "M", "X", "Y", "Z"
+        ];
 
-# --- TOP: WORD BANK ---
-st.markdown('<div class="word-header">', unsafe_allow_html=True)
-for e in ELEMENTS:
-    cls = "tag-found" if e in st.session_state.found else "tag-pending"
-    st.markdown(f'<span class="{cls}">{e}</span>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+        let selectedIndices = [];
+        let foundWords = [];
 
-# --- MIDDLE: THE INTERACTIVE GRID ---
-st.write(f"### Current Selection: `{st.session_state.selection}`")
+        // Build Word List
+        function updateWordList() {
+            const listDiv = document.getElementById('wordList');
+            listDiv.innerHTML = elements.map(e => `<span class="word-item ${foundWords.includes(e) ? 'crossed' : ''}">${e}</span>`).join('');
+        }
 
-# Create columns for the grid
-cols = st.columns(10)
-for r_idx, row_str in enumerate(GRID_DATA):
-    letters = row_str.split()
-    for c_idx, char in enumerate(letters):
-        # Unique key for every button
-        if cols[c_idx].button(char, key=f"btn_{r_idx}_{c_idx}"):
-            st.session_state.selection += char
-            
-            # Check if the built string matches any element
-            for word in ELEMENTS:
-                if st.session_state.selection == word:
-                    if word not in st.session_state.found:
-                        st.session_state.found.append(word)
-                        st.success(f"Discovered: {word}!")
-                        st.session_state.selection = "" # Clear after find
-                        st.rerun()
+        // Build Grid
+        const board = document.getElementById('gridBoard');
+        gridData.forEach((char, idx) => {
+            const div = document.createElement('div');
+            div.className = 'cell';
+            div.innerText = char;
+            div.onclick = () => toggleSelect(idx, div);
+            board.appendChild(div);
+        });
 
-# --- CONTROLS ---
-col_clear, col_reset = st.columns(2)
-with col_clear:
-    if st.button("Clear Selection ❌"):
-        st.session_state.selection = ""
-        st.rerun()
-with col_reset:
-    if st.button("Reset Game ♻️"):
-        st.session_state.clear()
-        st.rerun()
+        function toggleSelect(idx, el) {
+            if (selectedIndices.includes(idx)) {
+                selectedIndices = selectedIndices.filter(i => i !== idx);
+                el.classList.remove('selected');
+            } else {
+                selectedIndices.push(idx);
+                el.classList.add('selected');
+            }
+            const currentString = selectedIndices.map(i => gridData[i]).join('');
+            document.getElementById('currentVal').innerText = currentString;
+        }
 
-st.markdown("<p style='text-align: center; color: #999; margin-top: 30px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+        function checkWord() {
+            const currentString = selectedIndices.map(i => gridData[i]).join('');
+            if (elements.includes(currentString)) {
+                foundWords.push(currentString);
+                selectedIndices.forEach(idx => {
+                    const cells = document.getElementsByClassName('cell');
+                    cells[idx].classList.remove('selected');
+                    cells[idx].classList.add('found');
+                });
+                selectedIndices = [];
+                document.getElementById('currentVal').innerText = "FOUND!";
+                updateWordList();
+            } else {
+                alert("Not a valid element!");
+                resetSelection();
+            }
+        }
+
+        function resetSelection() {
+            selectedIndices = [];
+            const cells = document.getElementsByClassName('cell');
+            for(let cell of cells) { cell.classList.remove('selected'); }
+            document.getElementById('currentVal').innerText = "---";
+        }
+
+        updateWordList();
+    </script>
+</body>
+</html>
+"""
+
+# 3. Render the Game
+components.html(game_html, height=650)
+
+st.markdown("<p style='text-align: center; color: #999;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
