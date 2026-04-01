@@ -6,11 +6,10 @@ import random
 st.set_page_config(page_title="Atomic Quest: SS1 Edition", layout="centered")
 
 # 2. SS1 Curriculum Element Database
-# Data: (Atomic No, Mass No, Group, Period, Symbol, Description)
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "Ne", "A noble gas with a stable octet structure. It does not react because its outer shell is full."),
     "BORON": (5, 11, 13, 2, "B", "A metalloid used in heat-resistant glass. It has 3 electrons in its valence shell."),
-    "OXYGEN": (8, 16, 16, 2, "O", "A non-metal essential for respiration. It is diatomic (O₂) and highly electronegative."),
+    "OXYGEN": (8, 16, 16, 2, "O", "A non-metal essential for respiration. It is diatomic (O2) and highly electronegative."),
     "SODIUM": (11, 23, 1, 3, "Na", "A highly reactive alkali metal. It is stored in oil to prevent reaction with air or moisture."),
     "CARBON": (6, 12, 14, 2, "C", "A non-metal that shows allotropy (Diamond and Graphite). It is the basis of organic chemistry."),
     "HELIUM": (2, 4, 18, 1, "He", "A noble gas with a duplet structure. It is used in weather balloons because it is very light."),
@@ -49,7 +48,7 @@ if st.button("💣"):
 
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE (60s TIMER)
+# 3. THE QUEST ENGINE
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -117,13 +116,9 @@ game_html = f"""
         if(!timerActive) return;
         timeLeft--;
         document.getElementById('timer').innerText = timeLeft;
-        if(timeLeft <= 10) document.getElementById('timer').style.color = "#ff4757";
-        
         if(timeLeft <= 0) {{
             timerActive = false;
             clearInterval(timerInterval);
-            document.getElementById('msg-overlay').innerText = "TIME UP! ⏳";
-            document.getElementById('msg-overlay').className = "msg-wrong show-msg";
             setTimeout(() => {{ 
                 const btn = window.parent.document.querySelectorAll('button');
                 for (let b of btn) if(b.innerText.includes("💣")) b.click();
@@ -175,10 +170,10 @@ game_html = f"""
 </html>
 """
 
-# 4. App Logic
+# 4. Main App
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Your energy has fully depleted.")
-    if st.button("♻️ RESTART SS1 CURRICULUM", use_container_width=True):
+    st.error("💀 GAME OVER! Energy Depleted.")
+    if st.button("♻️ RESTART QUEST", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -187,26 +182,26 @@ else:
     components.html(game_html, height=260)
     st.write("---")
     
-    # 5. SS1 DATA SHEET
-    verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type name to unlock SS1 notes...", label_visibility="collapsed")
+    # 5. DATA SHEET
+    verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type element name to unlock SS1 notes...", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
-        d = ELEMENTS_DB[target_word]
+        data = ELEMENTS_DB[target_word]
         st.markdown(f"""
         <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
             <div style="text-align: center; border-bottom: 2px solid #f39c12; margin-bottom: 15px;">
                 <h2 style="margin: 0; color: #2c3e50;">{target_word}</h2>
-                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{d[4]}</span>
+                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{data[4]}</span>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{d[0]}</span></div>
-                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{d[1]}</span></div>
+                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{data[0]}</span></div>
+                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{data[1]}</span></div>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
-                <div style="text-align: center;"><b>Group</b><br>{d[2]}</div>
-                <div style="text-align: center;"><b>Period</b><br>{d[3]}</div>
+                <div style="text-align: center;"><b>Group</b><br>{data[2]}</div>
+                <div style="text-align: center;"><b>Period</b><br>{data[3]}</div>
             </div>
-            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>SS1 Curriculum Overview:</b> {d[5]}</p>
+            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>SS1 Curriculum Overview:</b> {data[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
@@ -215,17 +210,16 @@ else:
     else:
         st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 
-# 6. SS1 STUDENT GUIDE
+# 6. HOW TO PLAY
 st.markdown("---")
-[attachment_0](attachment)
 st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
     <h3 style="margin-top:0; color: #f39c12;">🗺️ SS1 Quest Manual</h3>
     <div style="font-size: 14px; line-height: 1.6;">
-        <p><b>1. Master the Symbols:</b> Use your SS1 chemistry knowledge to unscramble the element name within <b>60 seconds</b>.</p>
-        <p><b>2. Life Management:</b> If the <b>💣</b> triggers (timer hits zero), you lose 1 Heart. Protect your 3 Hearts to reach the final element.</p>
-        <p><b>3. Periodic Law:</b> Once you stabilize an element, check the <i>Scroll of Truth</i>. Study the <b>Atomic Number</b> (number of protons) and <b>Mass Number</b> (protons + neutrons) carefully.</p>
-        <p><b>4. SS1 Exam Prep:</b> Focus on the <b>Group</b> (valence electrons) and <b>Period</b> (number of shells) to master the periodic table for your WAEC/NECO exams.</p>
+        <p><b>1. Solve symbols:</b> Unscramble the element within <b>60 seconds</b>.</p>
+        <p><b>2. Life Management:</b> If the <b>💣</b> triggers (timer hits zero), you lose a Heart. Protect your 3 Hearts!</p>
+        <p><b>3. Periodic Law:</b> Once stabilized, use the <i>Scroll of Truth</i>. Study the <b>Atomic Number</b> and <b>Mass Number</b>.</p>
+        <p><b>4. SS1 Prep:</b> Focus on the <b>Group</b> and <b>Period</b> for your WAEC/NECO exams.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
