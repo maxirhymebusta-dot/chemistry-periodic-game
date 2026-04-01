@@ -28,16 +28,9 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# Reset Game Logic
-def reset_to_start():
-    st.session_state.lvl = 0
-    st.session_state.lives = 3
-    st.session_state.game_over = False
-    st.rerun()
-
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE (NO REDIRECTS - PURE JAVASCRIPT LOGIC)
+# 3. THE QUEST ENGINE
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -65,9 +58,11 @@ game_html = f"""
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }}
-        .msg-correct {{ background: #f1c40f; color: #000; }}
-        .msg-wrong {{ background: #e74c3c; color: white; }}
+        .msg-correct {{ background: #f1c40f; color: #000; box-shadow: 0 0 15px #f1c40f; }}
+        .msg-wrong {{ background: #e74c3c; color: white; box-shadow: 0 0 15px #e74c3c; }}
         .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
+        .shake {{ animation: shake 0.3s ease-in-out; }}
+        @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-8px);}} 75% {{transform: translateX(8px);}} }}
     </style>
 </head>
 <body>
@@ -106,10 +101,9 @@ game_html = f"""
         document.getElementById('timer').innerText = timeLeft;
         if(timeLeft <= 0) {{
             timerActive = false;
-            document.getElementById('msg-overlay').innerText = "LIFE LOST! ❤️-1";
+            clearInterval(timerInterval);
+            document.getElementById('msg-overlay').innerText = "TIME EXPIRED! ⏳";
             document.getElementById('msg-overlay').className = "msg-wrong show-msg";
-            playSound(100, 'sawtooth', 0.5, 0.2);
-            // Instead of redirecting, we tell Streamlit via a hidden click
             setTimeout(() => {{ 
                 const btn = window.parent.document.querySelectorAll('button');
                 for (let b of btn) if(b.innerText.includes("INTERNAL_REDUCE")) b.click();
@@ -121,6 +115,7 @@ game_html = f"""
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
         ansRow.innerHTML = ""; poolRow.innerHTML = "";
+        
         for(let i=0; i<target.length; i++) {{
             let d = document.createElement('div'); d.className = 'tile';
             if(!answer[i]) d.style.background = "rgba(255,255,255,0.05)";
@@ -128,16 +123,37 @@ game_html = f"""
             if(answer[i] && timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); removeLetter(i); }};
             ansRow.appendChild(d);
         }}
+        
         pool.forEach((char, i) => {{
             let d = document.createElement('div'); d.className = 'tile'; d.innerText = char;
             if(timerActive) d.onclick = () => {{ playSound(200, 'sine', 0.1); addLetter(i); }};
             poolRow.appendChild(d);
         }});
-        if(answer.join('') === target) {{
-            timerActive = false;
-            document.getElementById('msg-overlay').innerText = "STABILIZED! 🏆";
-            document.getElementById('msg-overlay').className = "msg-correct show-msg";
-            playSound(523, 'sine', 0.4);
+
+        // IMMEDIATE CHECK LOGIC
+        if(answer.length === target.length) {{
+            const msg = document.getElementById('msg-overlay');
+            if(answer.join('') === target) {{
+                timerActive = false;
+                msg.innerText = "STABILIZED! 🏆";
+                msg.className = "msg-correct show-msg";
+                playSound(523, 'sine', 0.4);
+            }} else {{
+                // WRONG POPUP SHOWS IMMEDIATELY
+                msg.innerText = "ERROR! 💀";
+                msg.className = "msg-wrong show-msg";
+                document.getElementById('card').classList.add('shake');
+                playSound(100, 'sawtooth', 0.3, 0.2);
+                
+                setTimeout(() => {{ 
+                    msg.classList.remove('show-msg'); 
+                    document.getElementById('card').classList.remove('shake');
+                    // Reset slots so they can try again quickly
+                    answer.forEach(char => pool.push(char));
+                    answer = [];
+                    render();
+                }}, 800);
+            }}
         }}
     }}
     function addLetter(i) {{ if(answer.length < target.length) {{ answer.push(pool.splice(i, 1)[0]); render(); }} }}
@@ -160,7 +176,10 @@ if st.button("INTERNAL_REDUCE"):
 if st.session_state.game_over:
     st.error("💀 ALL HEARTS LOST! Your journey ends here.")
     if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
-        reset_to_start()
+        st.session_state.lvl = 0
+        st.session_state.lives = 3
+        st.session_state.game_over = False
+        st.rerun()
 else:
     components.html(game_html, height=260)
     st.write("---")
@@ -173,9 +192,7 @@ else:
         st.markdown(f"""
         <div style="background: #fff; padding: 15px; border-radius: 12px; border: 2px solid #f39c12; color: #222;">
             <h3 style="color: #2c3e50; margin: 0 0 10px 0; text-align: center;">🛡️ {target_word} DATA</h3>
-            <p style="font-size: 14px; margin: 4px 0;"><b>Atomic No (Protons):</b> {d[0]}</p>
-            <p style="font-size: 14px; margin: 4px 0;"><b>Mass No (Weight):</b> {d[1]}</p>
-            <p style="font-size: 14px; margin: 4px 0;"><b>Group/Period:</b> {d[2]} / {d[3]}</p>
+            <p style="font-size: 14px; margin: 4px 0;"><b>Atomic No:</b> {d[0]} | <b>Mass No:</b> {d[1]}</p>
             <p style="font-size: 13px; color: #555; border-top: 1px solid #eee; padding-top: 5px;"><b>Lore:</b> {d[4]}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -189,10 +206,8 @@ else:
 st.markdown("""
 ---
 ### 📖 How to Play
-1. **Unscramble:** Tap letters within **15 seconds** to spell the element.
-2. **Penalty:** If the timer hits **0**, you lose **1 ❤️**. Lose 3 and you restart from Level 1.
-3. **Knowledge:** Type the name in the **Scroll of Truth** to unlock the Scientific Data.
-4. **Data:** Read the Atomic No (Identity), Mass No (Weight), and Group/Period (Location) before moving on.
+1. **Unscramble:** Tap letters in the inventory to fill the slots.
+2. **Speed:** You have **15 seconds** per element.
+3. **Wrong Answers:** If you fill the slots incorrectly, the card will shake and show **ERROR!**. Your letters will return to your inventory so you can try again.
+4. **Game Over:** If the timer hits zero, you lose a heart. Lose all three, and the game resets to Level 1.
 """)
-
-st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
