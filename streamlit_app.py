@@ -6,7 +6,6 @@ import random
 st.set_page_config(page_title="Atomic Row", layout="centered")
 
 # 2. Comprehensive Element Database
-# Values are: (Atomic No, Mass No, Group, Period, Overview)
 ELEMENTS_DB = {
     "NEON": (10, 20, 18, 2, "A noble gas used in bright signs. It is chemically inert and glows reddish-orange."),
     "BORON": (5, 11, 13, 2, "A metalloid used in fiberglass and pyrotechnics. Essential for plant growth."),
@@ -23,12 +22,10 @@ ELEMENTS_DB = {
 }
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
-
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
-
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE GAME ENGINE (Optimized for Mobile)
+# 3. THE GAME ENGINE (LIVELY AUDIO + CLICK EFFECTS)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -59,7 +56,7 @@ game_html = f"""
         .show-msg {{ transform: translateX(-50%) scale(1) !important; }}
         .shake {{ animation: shake 0.3s ease-in-out; }}
         @keyframes shake {{ 0%, 100% {{transform: translateX(0);}} 25% {{transform: translateX(-8px);}} 75% {{transform: translateX(8px);}} }}
-        .music-btn {{ background: rgba(255,255,255,0.2); border: 1px solid white; color: white; border-radius: 20px; padding: 4px 12px; font-size: 11px; cursor: pointer; margin-top: 5px; }}
+        .music-btn {{ background: rgba(255,255,255,0.3); border: 2px solid white; color: white; border-radius: 20px; padding: 5px 15px; font-size: 11px; font-weight:bold; cursor: pointer; margin-top: 5px; }}
     </style>
 </head>
 <body>
@@ -70,16 +67,18 @@ game_html = f"""
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">LETTER POOL</div>
     <div class="tile-row" id="pool-row"></div>
-    <button class="music-btn" id="musicToggle" onclick="toggleMusic()">🎵 Music: OFF</button>
+    <button class="music-btn" id="musicToggle" onclick="toggleMusic()">🎮 THEME: OFF</button>
 </div>
+
 <script>
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let musicNode = null;
+    let musicInterval = null;
 
     function playSound(freq, type, dur, vol=0.1) {{
+        if(audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         g.gain.setValueAtTime(vol, audioCtx.currentTime);
@@ -90,18 +89,19 @@ game_html = f"""
 
     function toggleMusic() {{
         const btn = document.getElementById('musicToggle');
-        if(!musicNode) {{
-            musicNode = audioCtx.createGain(); musicNode.gain.value = 0.03;
-            setInterval(() => {{
-                if(musicNode) {{
-                    const t = audioCtx.currentTime; const osc = audioCtx.createOscillator();
-                    osc.type = 'triangle'; osc.frequency.setValueAtTime([110, 130, 165][Math.floor(t % 3)], t);
-                    osc.connect(musicNode); musicNode.connect(audioCtx.destination);
-                    osc.start(t); osc.stop(t + 0.5);
-                }}
-            }}, 500);
-            btn.innerText = "🎵 Music: ON";
-        }} else {{ musicNode.disconnect(); musicNode = null; btn.innerText = "🎵 Music: OFF"; }}
+        if(!musicInterval) {{
+            btn.innerText = "🎮 THEME: ON";
+            // A lively, upbeat game-show style arpeggio
+            musicInterval = setInterval(() => {{
+                const t = audioCtx.currentTime;
+                [261, 329, 392, 523].forEach((f, i) => {{
+                    playSound(f, 'sine', 0.2, 0.02);
+                }});
+            }}, 800);
+        }} else {{
+            clearInterval(musicInterval); musicInterval = null;
+            btn.innerText = "🎮 THEME: OFF";
+        }}
     }}
 
     function render() {{
@@ -112,22 +112,22 @@ game_html = f"""
             let div = document.createElement('div'); div.className = 'tile';
             if(!answer[i]) div.style.background = "rgba(255,255,255,0.1)";
             div.innerText = answer[i] || "?";
-            if(answer[i]) div.onclick = () => {{ playSound(800, 'sine', 0.1, 0.05); removeLetter(i); }};
+            if(answer[i]) div.onclick = () => {{ playSound(1000, 'sine', 0.05, 0.05); removeLetter(i); }};
             ansRow.appendChild(div);
         }}
         pool.forEach((char, i) => {{
             let div = document.createElement('div'); div.className = 'tile'; div.innerText = char;
-            div.onclick = () => {{ playSound(800, 'sine', 0.1, 0.05); addLetter(i); }};
+            div.onclick = () => {{ playSound(1000, 'sine', 0.05, 0.05); addLetter(i); }};
             poolRow.appendChild(div);
         }});
         if(answer.length === target.length) {{
             const msg = document.getElementById('msg-overlay');
             if(answer.join('') === target) {{
                 msg.innerText = "STABILIZED! ✨"; msg.className = "msg-correct show-msg";
-                playSound(523, 'sine', 0.4); playSound(659, 'sine', 0.5);
+                playSound(523, 'sine', 0.4); playSound(659, 'sine', 0.5); playSound(783, 'sine', 0.6);
             }} else {{
-                msg.innerText = "UNSTABLE! ❌"; msg.className = "msg-wrong show-msg";
-                playSound(100, 'square', 0.3); document.getElementById('card').classList.add('shake');
+                msg.innerText = "TRY AGAIN! ❌"; msg.className = "msg-wrong show-msg";
+                playSound(150, 'sawtooth', 0.3); document.getElementById('card').classList.add('shake');
                 setTimeout(() => {{ 
                     msg.classList.remove('show-msg'); document.getElementById('card').classList.remove('shake');
                     answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render();
@@ -144,7 +144,7 @@ game_html = f"""
 """
 
 # 4. Render Game
-components.html(game_html, height=280)
+components.html(game_html, height=290)
 
 # 5. DATA SHEET & VERIFICATION
 st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
@@ -152,10 +152,8 @@ verify_text = st.text_input("🔬 Verify Element to Unlock:", placeholder="Type 
 
 if verify_text.upper() == target_word:
     data = ELEMENTS_DB[target_word]
-    
-    # Professional Data Sheet Table
     st.markdown(f"""
-    <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid #82c91e; margin-bottom: 10px;">
+    <div style="background: white; padding: 15px; border-radius: 10px; border: 2px solid #82c91e; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <h4 style="color: #1a2a6c; margin-top:0;">📊 {target_word} DATA SHEET</h4>
         <table style="width:100%; font-size:13px; text-align:left; border-collapse: collapse;">
             <tr style="border-bottom: 1px solid #eee;"><td><b>Atomic Number ($Z$):</b></td><td>{data[0]}</td></tr>
@@ -174,7 +172,7 @@ else:
     st.button("🔒 LEVEL LOCKED", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 6. HOW TO PLAY (REWRITTEN & POLISHED)
+# 6. ENHANCED HOW TO PLAY
 st.markdown("---")
 st.markdown("""
 <div style="background: #ffffff; padding: 18px; border-radius: 15px; border-left: 6px solid #1a2a6c; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
@@ -191,7 +189,7 @@ st.markdown("""
         <li style="margin-bottom: 8px;"><b>4. Discovery:</b> Type the element name into the verification box to generate its <b>Scientific Data Sheet</b> and unlock the next level.</li>
     </ul>
     <p style="font-size: 12px; color: #1a2a6c; font-weight: bold; background: #eef2ff; padding: 8px; border-radius: 5px; text-align: center;">
-        PRO TIP: Activate the 🎵 Theme for an immersive laboratory vibe!
+        PRO TIP: Activate the 🎮 THEME for high-energy vibes!
     </p>
 </div>
 """, unsafe_allow_html=True)
