@@ -10,10 +10,12 @@ ELEMENTS = ["NEON", "BORON", "OXYGEN", "SODIUM", "CARBON", "HELIUM", "SILICON", 
 
 if 'lvl' not in st.session_state: 
     st.session_state.lvl = 0
+if 'solved' not in st.session_state:
+    st.session_state.solved = False
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# 3. THE GAME ENGINE
+# 3. THE GAME ENGINE (HTML + JS + AUDIO)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -33,26 +35,23 @@ game_html = f"""
 
         .game-card {{
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            padding: 20px;
-            border-radius: 25px;
+            padding: 25px;
+            border-radius: 30px;
             color: white;
             text-align: center;
             width: 100%;
-            max-width: 350px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 360px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.6);
             position: relative;
-            transition: transform 0.2s;
         }}
         
-        /* SHAKE ANIMATION FOR WRONG ANSWER */
         @keyframes shake {{
             0% {{ transform: translateX(0); }}
-            25% {{ transform: translateX(-10px); }}
-            50% {{ transform: translateX(10px); }}
-            75% {{ transform: translateX(-10px); }}
+            25% {{ transform: translateX(-8px); }}
+            50% {{ transform: translateX(8px); }}
             100% {{ transform: translateX(0); }}
         }}
-        .shake-effect {{ animation: shake 0.3s ease-in-out; }}
+        .shake {{ animation: shake 0.2s ease-in-out 2; }}
 
         .tile-row {{
             display: flex;
@@ -60,7 +59,7 @@ game_html = f"""
             justify-content: center;
             gap: 6px;
             margin: 15px 0;
-            min-height: 55px;
+            min-height: 50px;
         }}
 
         .tile {{
@@ -74,81 +73,94 @@ game_html = f"""
             justify-content: center;
             font-weight: 900;
             font-size: 18px;
-            box-shadow: 0 4px 0 #bdc3c7, 0 6px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 0 #bdc3c7;
             cursor: pointer;
         }}
 
-        /* FEEDBACK MESSAGES */
         #msg-overlay {{
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(0);
-            padding: 15px 30px;
+            padding: 15px 25px;
             border-radius: 50px;
             font-weight: bold;
             font-size: 22px;
             z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
         }}
-
         .msg-correct {{ background: #82c91e; color: white; box-shadow: 0 0 20px #82c91e; }}
         .msg-wrong {{ background: #ff4b2b; color: white; box-shadow: 0 0 20px #ff4b2b; }}
         .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
 
-        #canvas {{ position: absolute; top: 0; left: 0; pointer-events: none; }}
-        .label {{ font-size: 11px; font-weight: bold; letter-spacing: 2px; color: rgba(255,255,255,0.7); margin-top: 15px; }}
         .btn-reset {{
-            margin-top: 20px; padding: 8px 18px;
-            background: rgba(255,255,255,0.15);
+            margin-top: 15px; padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
             border: 1px solid white; color: white;
-            border-radius: 12px; cursor: pointer; font-size: 12px;
+            border-radius: 15px; cursor: pointer; visibility: hidden;
+        }}
+        .visible {{ visibility: visible !important; }}
+        
+        .music-toggle {{
+            position: absolute; top: 10px; right: 10px;
+            background: none; border: none; color: white; font-size: 20px; cursor: pointer;
         }}
     </style>
 </head>
 <body>
 
 <div class="game-card" id="card">
-    <canvas id="canvas"></canvas>
+    <button class="music-toggle" onclick="toggleMusic()">🎵</button>
     <div id="msg-overlay"></div>
 
-    <h1 style="font-family: 'Arial Black'; margin:0; font-size: 24px;">🧪 ATOMIC ROW</h1>
-    <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
+    <h1 style="font-family: 'Arial Black'; margin:0; font-size: 26px; letter-spacing: -1px;">ATOMIC ROW</h1>
+    <p style="font-size:14px; opacity:0.8;">Element Challenge: Level {st.session_state.lvl + 1}</p>
     
-    <div class="label">YOUR WORD</div>
+    <div style="font-size:11px; margin-top:15px; opacity:0.7;">YOUR WORD</div>
     <div class="tile-row" id="ans-row"></div>
 
-    <div class="label">LETTER POOL</div>
+    <div style="font-size:11px; margin-top:5px; opacity:0.7;">LETTER POOL</div>
     <div class="tile-row" id="pool-row"></div>
     
-    <button class="btn-reset" onclick="resetGame()">Reset Level ♻️</button>
+    <button id="reset-btn" class="btn-reset" onclick="resetGame()">Reset Level ♻️</button>
 </div>
 
 <script>
     let target = "{target_word}";
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
-    const card = document.getElementById('card');
-    const msg = document.getElementById('msg-overlay');
+    
+    // AUDIO CONTEXT
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTone(freq, type, duration) {{
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }}
+
+    function playCorrect() {{ playTone(523.25, 'sine', 0.5); setTimeout(() => playTone(659.25, 'sine', 0.5), 100); }}
+    function playWrong() {{ playTone(150, 'sawtooth', 0.3); }}
 
     function render() {{
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
+        const resetBtn = document.getElementById('reset-btn');
         ansRow.innerHTML = "";
         poolRow.innerHTML = "";
 
         for(let i=0; i<target.length; i++) {{
             let div = document.createElement('div');
-            if(answer[i]) {{
-                div.className = 'tile';
-                div.innerText = answer[i];
-                div.onclick = () => removeLetter(i);
-            }} else {{
-                div.className = 'tile empty-tile';
-                div.style.background = "rgba(255,255,255,0.1)";
-                div.style.border = "2px dashed rgba(255,255,255,0.3)";
-                div.innerText = "?";
-            }}
+            div.className = 'tile' + (answer[i] ? '' : ' empty-tile');
+            if(!answer[i]) div.style.background = "rgba(255,255,255,0.1)";
+            div.innerText = answer[i] || "?";
+            if(answer[i]) div.onclick = () => removeLetter(i);
             ansRow.appendChild(div);
         }}
 
@@ -160,24 +172,23 @@ game_html = f"""
             poolRow.appendChild(div);
         }});
 
-        // CHECK LOGIC
         if(answer.length === target.length) {{
             if(answer.join('') === target) {{
-                showFeedback("CORRECT! ✨", "msg-correct");
-                // Particle code simplified for space
+                playCorrect();
+                document.getElementById('msg-overlay').innerText = "STABILIZED! ✨";
+                document.getElementById('msg-overlay').className = "msg-correct show-msg";
+                window.parent.postMessage({{"type": "solved"}}, "*");
             }} else {{
-                showFeedback("TRY AGAIN! ❌", "msg-wrong");
-                card.classList.add('shake-effect');
-                setTimeout(() => card.classList.remove('shake-effect'), 500);
+                playWrong();
+                document.getElementById('card').classList.add('shake');
+                document.getElementById('msg-overlay').innerText = "UNSTABLE! ❌";
+                document.getElementById('msg-overlay').className = "msg-wrong show-msg";
+                resetBtn.classList.add('visible');
+                setTimeout(() => {{
+                    document.getElementById('card').classList.remove('shake');
+                    document.getElementById('msg-overlay').classList.remove('show-msg');
+                }}, 1200);
             }}
-        }}
-    }}
-
-    function showFeedback(text, className) {{
-        msg.innerText = text;
-        msg.className = className + " show-msg";
-        if(className === "msg-wrong") {{
-            setTimeout(() => msg.classList.remove('show-msg'), 1500);
         }}
     }}
 
@@ -189,7 +200,6 @@ game_html = f"""
     }}
 
     function removeLetter(i) {{
-        msg.classList.remove('show-msg');
         pool.push(answer.splice(i, 1)[0]);
         render();
     }}
@@ -197,26 +207,44 @@ game_html = f"""
     function resetGame() {{
         answer = [];
         pool = target.split('').sort(() => Math.random() - 0.5);
-        msg.classList.remove('show-msg');
+        document.getElementById('msg-overlay').classList.remove('show-msg');
+        document.getElementById('reset-btn').classList.remove('visible');
         render();
+    }}
+
+    function toggleMusic() {{
+        // Simple theme loop using tones
+        setInterval(() => playTone(200, 'triangle', 2), 2000);
     }}
 
     render();
 </script>
-
 </body>
 </html>
 """
 
-# 4. Render the UI
-components.html(game_html, height=500)
+# 4. Handle PostMessage from HTML (to show Next Level)
+# Using a small hack to detect if solved without re-running everything
+components.html(game_html, height=480)
 
-# 5. Next Level Button
-st.write("---")
-if st.button("NEXT LEVEL 🚀", use_container_width=True):
-    st.session_state.lvl += 1
-    if st.session_state.lvl >= len(ELEMENTS):
-        st.session_state.lvl = 0
-    st.rerun()
+# 5. Instructions (How to Play)
+st.markdown("""
+<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid #ddd;">
+    <h4 style="margin-top:0;">📖 How to Play:</h4>
+    <ul style="font-size: 14px;">
+        <li>Tap letters in the <b>Letter Pool</b> to move them into the <b>Your Word</b> slots.</li>
+        <li>Arrange them to correctly spell the chemical element shown at the top.</li>
+        <li>If you make a mistake, tap the letter in your word to send it back.</li>
+        <li>Correct answers unlock the <b>Next Level</b>!</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown("<p style='text-align: center; color: #777; font-size:10px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+# 6. Next Level Logic (Appears ONLY if the user solves it)
+# We add a checkbox or button that the user can click once they see the "Stabilized" message
+if st.checkbox("Unlock Next Level (Click after Stabilizing)"):
+    if st.button("GO TO NEXT LEVEL 🚀", use_container_width=True):
+        st.session_state.lvl += 1
+        st.rerun()
+
+st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:20px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
