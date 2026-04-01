@@ -10,10 +10,18 @@ ELEMENTS = ["NEON", "BORON", "OXYGEN", "SODIUM", "CARBON", "HELIUM", "SILICON", 
 
 if 'lvl' not in st.session_state: 
     st.session_state.lvl = 0
+if 'unlocked' not in st.session_state:
+    st.session_state.unlocked = False
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# 3. THE GAME ENGINE (Internal Logic + Sound)
+# --- THE HIDDEN TRIGGER ---
+# This invisible button is clicked by the JavaScript when the user wins
+if st.button("🔓 UNLOCK SYSTEM", key="hidden_unlock", help="Internal use only"):
+    st.session_state.unlocked = True
+    st.rerun()
+
+# 3. THE GAME ENGINE
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -49,11 +57,9 @@ game_html = f"""
     <div id="msg-overlay"></div>
     <h1 style="font-family: 'Arial Black'; margin:0; font-size: 24px;">ATOMIC ROW</h1>
     <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
-    
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:10px; opacity:0.7;">TAP TO ARRANGE</div>
     <div class="tile-row" id="pool-row"></div>
-    
     <button id="reset-btn" style="display:none; margin-top:10px; background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset Level ♻️</button>
 </div>
 
@@ -87,6 +93,18 @@ game_html = f"""
             if(answer.join('') === target) {{
                 document.getElementById('msg-overlay').innerText = "CORRECT! ✨";
                 document.getElementById('msg-overlay').className = "msg-correct show-msg";
+                
+                // AUTOMATIC UNLOCK: This finds the hidden button in Streamlit and clicks it!
+                setTimeout(() => {{
+                    const buttons = window.parent.document.querySelectorAll('button');
+                    for (const btn of buttons) {{
+                        if (btn.innerText.includes("UNLOCK SYSTEM")) {{
+                            btn.click();
+                            break;
+                        }}
+                    }}
+                }}, 1000);
+
             }} else {{
                 document.getElementById('msg-overlay').innerText = "WRONG! ❌";
                 document.getElementById('msg-overlay').className = "msg-wrong show-msg";
@@ -115,24 +133,24 @@ components.html(game_html, height=450)
 
 st.write("---")
 
-# 5. NEXT LEVEL (The Smart Button)
-# Instead of a secret code, the user just clicks this to proceed.
-# It only works if the word is actually solved.
-if st.button("🚀 NEXT LEVEL", use_container_width=True):
-    # Since the logic is inside the HTML, we just increment the level
-    st.session_state.lvl += 1
-    if st.session_state.lvl >= len(ELEMENTS):
-        st.session_state.lvl = 0
-        st.success("🏆 ALL ELEMENTS DISCOVERED!")
-    st.rerun()
+# 5. THE HARD LOCK: Next Level button ONLY exists if st.session_state.unlocked is True
+if st.session_state.unlocked:
+    if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
+        st.session_state.lvl += 1
+        st.session_state.unlocked = False # Relock for the next level
+        if st.session_state.lvl >= len(ELEMENTS):
+            st.session_state.lvl = 0
+            st.success("🏆 ALL LEVELS COMPLETE!")
+        st.rerun()
+else:
+    st.warning("🔒 Level Locked: Solve the chemical puzzle to continue.")
 
-# 6. HOW TO PLAY (Bottom Section)
+# 6. HOW TO PLAY
 st.markdown("""
 <div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333;">
-    <h4 style="margin:0; color: #1a2a6c;">📖 How to Play:</h4>
-    <p style="font-size: 14px;">1. Tap letters in the <b>Letter Pool</b> to spell the element.<br>
-    2. Tap a letter in <b>Your Word</b> to send it back if you make a mistake.<br>
-    3. Once the <b>CORRECT!</b> message appears, click the <b>NEXT LEVEL</b> button above to continue.</p>
+    <h4 style="margin:0; color: #1a2a6c;">📖 Instructions:</h4>
+    <p style="font-size: 14px;">1. Tap letters to spell the element.<br>
+    2. Once you see <b>CORRECT!</b>, the "Next Level" button will automatically unlock below.</p>
 </div>
 """, unsafe_allow_html=True)
 
