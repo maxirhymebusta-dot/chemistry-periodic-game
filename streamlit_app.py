@@ -88,7 +88,7 @@ game_html = f"""
         <span id="lives-display">❤️ × {st.session_state.lives}</span>
         <span id="timer">60</span>
     </div>
-    <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC Scramble</h2>
+    <h2 style="font-family: 'Arial Black'; margin:0; font-size: 18px; color:#f39c12;">ATOMIC SCRAMBLE</h2>
     <div class="tile-row" id="ans-row"></div>
     <div style="font-size:9px; opacity:0.6; margin:2px 0;">INVENTORY</div>
     <div class="tile-row" id="pool-row"></div>
