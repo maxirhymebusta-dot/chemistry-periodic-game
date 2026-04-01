@@ -10,15 +10,13 @@ ELEMENTS = ["NEON", "BORON", "OXYGEN", "SODIUM", "CARBON", "HELIUM", "SILICON", 
 
 if 'lvl' not in st.session_state: 
     st.session_state.lvl = 0
-
-# --- THE UNLOCK DETECTOR ---
-# This checks the URL for a "win" signal
-params = st.query_params
-is_unlocked = params.get("win") == "true"
+if 'input_val' not in st.session_state:
+    st.session_state.input_val = ""
 
 target_word = ELEMENTS[st.session_state.lvl]
 
 # 3. THE GAME ENGINE
+# No more hidden signals—just pure, fast gameplay
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -29,7 +27,7 @@ game_html = f"""
         body {{ font-family: sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; background: transparent; }}
         .game-card {{
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            padding: 25px; border-radius: 30px; color: white; text-align: center;
+            padding: 25px; border-radius: 25px; color: white; text-align: center;
             width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             position: relative;
         }}
@@ -41,23 +39,21 @@ game_html = f"""
         }}
         #msg-overlay {{
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            padding: 15px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; z-index: 100;
+            padding: 15px 20px; border-radius: 20px; font-weight: bold; font-size: 20px; z-index: 100;
             transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }}
         .msg-correct {{ background: #82c91e; color: white; box-shadow: 0 0 20px #82c91e; }}
-        .msg-wrong {{ background: #ff4b2b; color: white; box-shadow: 0 0 20px #ff4b2b; }}
         .show-msg {{ transform: translate(-50%, -50%) scale(1) !important; }}
     </style>
 </head>
 <body>
 <div class="game-card" id="card">
-    <div id="msg-overlay"></div>
+    <div id="msg-overlay" class="msg-correct">CORRECT! ✨</div>
     <h1 style="font-family: 'Arial Black'; margin:0; font-size: 24px;">ATOMIC ROW</h1>
     <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
     <div class="tile-row" id="ans-row"></div>
-    <div style="font-size:10px; opacity:0.7;">TAP TO ARRANGE</div>
     <div class="tile-row" id="pool-row"></div>
-    <button id="reset-btn" style="display:none; margin-top:10px; background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset Level ♻️</button>
+    <button style="background:none; border:1px solid white; color:white; border-radius:5px; padding:5px 10px;" onclick="resetGame()">Reset ♻️</button>
 </div>
 
 <script>
@@ -86,33 +82,16 @@ game_html = f"""
             poolRow.appendChild(div);
         }});
 
-        if(answer.length === target.length) {{
-            if(answer.join('') === target) {{
-                document.getElementById('msg-overlay').innerText = "CORRECT! ✨";
-                document.getElementById('msg-overlay').className = "msg-correct show-msg";
-                
-                // NEW RELIABLE UNLOCK: Updates the URL to signal a win
-                setTimeout(() => {{
-                    window.parent.location.href = window.parent.location.pathname + "?win=true";
-                }}, 1000);
-
-            }} else {{
-                document.getElementById('msg-overlay').innerText = "WRONG! ❌";
-                document.getElementById('msg-overlay').className = "msg-wrong show-msg";
-                document.getElementById('reset-btn').style.display = "inline-block";
-                setTimeout(() => {{ document.getElementById('msg-overlay').classList.remove('show-msg'); }}, 1500);
-            }}
+        if(answer.join('') === target) {{
+            document.getElementById('msg-overlay').classList.add('show-msg');
+        }} else {{
+            document.getElementById('msg-overlay').classList.remove('show-msg');
         }}
     }}
 
     function addLetter(i) {{ if(answer.length < target.length) {{ answer.push(pool.splice(i, 1)[0]); render(); }} }}
     function removeLetter(i) {{ pool.push(answer.splice(i, 1)[0]); render(); }}
-    function resetGame() {{ 
-        answer = []; pool = target.split('').sort(() => Math.random() - 0.5); 
-        document.getElementById('msg-overlay').classList.remove('show-msg');
-        document.getElementById('reset-btn').style.display = "none";
-        render(); 
-    }}
+    function resetGame() {{ answer = []; pool = target.split('').sort(() => Math.random() - 0.5); render(); }}
     render();
 </script>
 </body>
@@ -120,31 +99,30 @@ game_html = f"""
 """
 
 # 4. Render Game
-components.html(game_html, height=450)
+components.html(game_html, height=420)
 
+# 5. THE VERIFICATION ENGINE (Manual Step)
 st.write("---")
+# A small text input that acts as the "Verification"
+check_val = st.text_input("🧪 Verify Element Name to Proceed:", placeholder="Type answer here...")
 
-# 5. THE NEXT LEVEL BUTTON (Conditional)
-if is_unlocked:
+if check_val.upper() == target_word:
     if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
         st.session_state.lvl += 1
-        st.query_params.clear() # Clear the win signal
         if st.session_state.lvl >= len(ELEMENTS):
             st.session_state.lvl = 0
             st.balloons()
-            st.success("🏆 MASTERY ACHIEVED!")
         st.rerun()
 else:
-    # Use a button that does nothing but shows the lock
-    st.button("🔒 LEVEL LOCKED (Solve Puzzle)", disabled=True, use_container_width=True)
+    st.button("🔒 LEVEL LOCKED", disabled=True, use_container_width=True)
 
 # 6. HOW TO PLAY
 st.markdown("""
 <div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333; margin-top: 10px;">
     <h4 style="margin:0; color: #1a2a6c;">📖 How to Play:</h4>
-    <p style="font-size: 14px;">1. Tap letters to spell the element correctly.<br>
-    2. Once solved, wait for <b>CORRECT!</b> and the page will refresh.<br>
-    3. The <b>Next Level</b> button will appear automatically!</p>
+    <p style="font-size: 14px;">1. Tap letters to spell the element.<br>
+    2. Once you see <b>CORRECT!</b>, type the element name in the <b>Verify</b> box below.<br>
+    3. The <b>Next Level</b> button will appear instantly!</p>
 </div>
 """, unsafe_allow_html=True)
 
