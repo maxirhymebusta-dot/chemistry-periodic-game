@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import random
 
 # 1. Page Config
-st.set_page_config(page_title="Atomic Quest", layout="centered")
+st.set_page_config(page_title="Atomic Scramble", layout="centered")
 
 # 2. Comprehensive Element Database
 ELEMENTS_DB = {
