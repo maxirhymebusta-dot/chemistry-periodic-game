@@ -23,7 +23,7 @@ ELEMENTS_DB = {
 
 ELEMENT_LIST = list(ELEMENTS_DB.keys())
 
-# --- SESSION STATE ---
+# --- SESSION STATE MANAGEMENT ---
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
@@ -74,7 +74,7 @@ game_html = f"""
         #msg-overlay {{
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
             padding: 8px 15px; border-radius: 50px; font-weight: bold; font-size: 18px; z-index: 100;
-            transition: 0.15s ease-in-out; pointer-events: none;
+            transition: 0.1s ease-in-out; pointer-events: none;
         }}
         .msg-correct {{ background: #f1c40f; color: #000; }}
         .msg-wrong {{ background: #e74c3c; color: white; }}
@@ -149,7 +149,6 @@ game_html = f"""
                 msg.innerText = "STABILIZED! 🏆";
                 msg.className = "msg-correct show-msg";
                 playSound(523, 'sine', 0.4);
-                // Disappears immediately (400ms)
                 setTimeout(() => {{ msg.classList.remove('show-msg'); }}, 400);
             }} else {{
                 msg.innerText = "ERROR! 💀";
@@ -172,10 +171,10 @@ game_html = f"""
 </html>
 """
 
-# 4. Main App
+# 4. Main App Logic
 if st.session_state.game_over:
-    st.error("💀 GAME OVER! Energy Depleted.")
-    if st.button("♻️ RESTART QUEST", use_container_width=True):
+    st.error("💀 GAME OVER! Your Hearts have run dry.")
+    if st.button("♻️ RESTART FROM LEVEL 1", use_container_width=True):
         st.session_state.lvl = 0
         st.session_state.lives = 3
         st.session_state.game_over = False
@@ -188,22 +187,23 @@ else:
     verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Type in the element name to unlock level", label_visibility="collapsed")
 
     if verify_text.upper() == target_word:
-        current_data = ELEMENTS_DB[target_word]
+        # Consistency Check: Using 'final_data' to avoid naming conflicts
+        final_data = ELEMENTS_DB[target_word]
         st.markdown(f"""
         <div style="background: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #f39c12; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333;">
             <div style="text-align: center; border-bottom: 2px solid #f39c12; margin-bottom: 15px;">
                 <h2 style="margin: 0; color: #2c3e50;">{target_word}</h2>
-                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{current_data[4]}</span>
+                <span style="font-size: 40px; font-weight: bold; color: #f39c12;">{final_data[4]}</span>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{current_data[0]}</span></div>
-                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{current_data[1]}</span></div>
+                <div style="text-align: center;"><b>Atomic Number (Z)</b><br><span style="font-size: 20px;">{final_data[0]}</span></div>
+                <div style="text-align: center;"><b>Mass Number (A)</b><br><span style="font-size: 20px;">{final_data[1]}</span></div>
             </div>
             <div style="display: flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px;">
-                <div style="text-align: center;"><b>Group</b><br>{current_data[2]}</div>
-                <div style="text-align: center;"><b>Period</b><br>{current_data[3]}</div>
+                <div style="text-align: center;"><b>Group</b><br>{final_data[2]}</div>
+                <div style="text-align: center;"><b>Period</b><br>{final_data[3]}</div>
             </div>
-            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Element Overview:</b> {current_data[5]}</p>
+            <p style="font-size: 13px; line-height: 1.6; text-align: justify; color: #555;"><b>Element Overview:</b> {final_data[5]}</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚀 ADVANCE TO NEXT STAGE", use_container_width=True):
@@ -214,7 +214,6 @@ else:
 
 # 6. HOW TO PLAY
 st.markdown("---")
-[attachment_0](attachment)
 st.markdown("""
 <div style="background: #2c3e50; padding: 20px; border-radius: 15px; border-left: 8px solid #f39c12; color: white;">
     <h3 style="margin-top:0; color: #f39c12;">📖 How to Play</h3>
