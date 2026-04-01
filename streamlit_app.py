@@ -13,8 +13,7 @@ if 'lvl' not in st.session_state:
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# 3. THE GAME ENGINE (HTML + JAVASCRIPT)
-# This handles all the logic internally so duplication cannot happen.
+# 3. THE GAME ENGINE (HTML + JAVASCRIPT + PARTICLES)
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -30,6 +29,7 @@ game_html = f"""
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow: hidden;
         }}
 
         .game-card {{
@@ -41,6 +41,7 @@ game_html = f"""
             width: 100%;
             max-width: 350px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
         }}
         
         .tile-row {{
@@ -76,25 +77,55 @@ game_html = f"""
             box-shadow: none;
             color: transparent;
         }}
-        
+
+        /* SUCCESS POPUP */
+        #success-msg {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: #82c91e;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(130, 201, 30, 0.6);
+            z-index: 100;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }}
+
+        .show-success {{ transform: translate(-50%, -50%) scale(1) !important; }}
+
+        /* PARTICLE CANVAS */
+        #canvas {{
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+        }}
+
         .label {{ font-size: 12px; font-weight: bold; letter-spacing: 2px; color: #eee; margin-top: 15px; }}
-        
         .btn-reset {{
             margin-top: 20px;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
             border: 1px solid white;
             color: white;
             border-radius: 10px;
+            font-size: 12px;
             cursor: pointer;
         }}
     </style>
 </head>
 <body>
 
-<div class="game-card">
+<div class="game-card" id="card">
+    <canvas id="canvas"></canvas>
+    <div id="success-msg">CORRECT! ✨</div>
+
     <h1 style="font-family: 'Arial Black'; margin:0; font-size: 24px;">🧪 ATOMIC ROW</h1>
-    <p id="lvl-text" style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
+    <p style="font-size:14px; opacity:0.8;">Level {st.session_state.lvl + 1}</p>
     
     <div class="label">YOUR WORD</div>
     <div class="tile-row" id="ans-row"></div>
@@ -110,29 +141,34 @@ game_html = f"""
     let pool = target.split('').sort(() => Math.random() - 0.5);
     let answer = [];
 
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 350;
+    canvas.height = 400;
+
+    let particles = [];
+
     function render() {{
         const ansRow = document.getElementById('ans-row');
         const poolRow = document.getElementById('pool-row');
-        
-        // Render Answer Row
         ansRow.innerHTML = "";
+        poolRow.innerHTML = "";
+
+        // Render Answer
         for(let i=0; i<target.length; i++) {{
+            let div = document.createElement('div');
             if(answer[i]) {{
-                let div = document.createElement('div');
                 div.className = 'tile';
                 div.innerText = answer[i];
                 div.onclick = () => removeLetter(i);
-                ansRow.appendChild(div);
             }} else {{
-                let div = document.createElement('div');
                 div.className = 'tile empty-tile';
                 div.innerText = "?";
-                ansRow.appendChild(div);
             }}
+            ansRow.appendChild(div);
         }}
 
         // Render Pool
-        poolRow.innerHTML = "";
         pool.forEach((char, i) => {{
             let div = document.createElement('div');
             div.className = 'tile';
@@ -142,7 +178,8 @@ game_html = f"""
         }});
 
         if(answer.join('') === target) {{
-            setTimeout(() => {{ alert("STABILIZED: " + target + "! Click the Next Level button below."); }}, 300);
+            document.getElementById('success-msg').classList.add('show-success');
+            createExplosion();
         }}
     }}
 
@@ -161,7 +198,39 @@ game_html = f"""
     function resetGame() {{
         answer = [];
         pool = target.split('').sort(() => Math.random() - 0.5);
+        document.getElementById('success-msg').classList.remove('show-success');
         render();
+    }}
+
+    // Particle Logic
+    function createExplosion() {{
+        for(let i=0; i<50; i++) {{
+            particles.push({{
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                color: `hsl(${{Math.random() * 360}}, 70%, 60%)`,
+                size: Math.random() * 5 + 2
+            }});
+        }}
+        animate();
+    }}
+
+    function animate() {{
+        if(particles.length === 0) return;
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        particles.forEach((p, i) => {{
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1; // gravity
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+            if(p.y > canvas.height) particles.splice(i, 1);
+        }});
+        requestAnimationFrame(animate);
     }}
 
     render();
@@ -172,15 +241,14 @@ game_html = f"""
 """
 
 # 4. Render the UI
-components.html(game_html, height=480)
+components.html(game_html, height=500)
 
-# 5. Next Level Button (Streamlit Side)
+# 5. Next Level Button
 st.write("---")
 if st.button("NEXT LEVEL 🚀", use_container_width=True):
     st.session_state.lvl += 1
     if st.session_state.lvl >= len(ELEMENTS):
-        st.session_state.lvl = 0 # Loop back to start
+        st.session_state.lvl = 0
     st.rerun()
 
 st.markdown("<p style='text-align: center; color: #777; font-size:10px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
-                
