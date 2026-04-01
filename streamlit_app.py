@@ -1,39 +1,52 @@
 import streamlit as st
 import time
 
-# 1. UI STYLING (The "Clean White" Educaplay Look)
+# 1. THE GRID SYSTEM (Forced Square Layout)
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff; }
     
-    /* Top Word List */
+    /* Top Word Bank */
     .word-bank {
-        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-        background: #f8f9fa; padding: 15px; border-radius: 10px;
-        border: 1px solid #eee; margin-bottom: 20px;
+        display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+        background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;
     }
-    .word-item { font-size: 12px; font-weight: 800; color: #444; text-transform: uppercase; }
-    .found { text-decoration: line-through; color: #cbd5e0; }
+    .word-tag { font-size: 10px; font-weight: 700; color: #495057; text-transform: uppercase; }
+    .word-tag.found { text-decoration: line-through; color: #ced4da; }
 
-    /* The Grid Layout (Fixed 12x12 for 20 words) */
-    .grid-wrapper {
-        display: grid; grid-template-columns: repeat(12, 1fr);
-        gap: 4px; max-width: 450px; margin: 0 auto;
+    /* THE GRID FIX: This forces the 10x10 shape */
+    .grid-container {
+        display: flex;
+        flex-wrap: wrap;
+        width: 320px; /* Fixed width to ensure 10 letters per row */
+        margin: 0 auto;
+        border: 2px solid #dee2e6;
+        padding: 5px;
+        background: white;
     }
-    .letter-cell {
-        aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;
-        font-size: 18px; font-weight: 900; color: #333; border-radius: 5px;
+    .letter-box {
+        width: 30px; 
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 800;
+        color: #212529;
+        font-family: 'Arial', sans-serif;
     }
 
-    /* Educaplay Pill Highlights */
-    .highlight { background-color: #b2f2bb; color: #2b8a3e; border-radius: 25px; }
+    /* Pill Highlights (Red/Blue/Green like your screenshot) */
+    .p-red { background-color: #ffc9c9; border-radius: 50%; color: #c92a2a; }
+    .p-blue { background-color: #a5d8ff; border-radius: 50%; color: #1971c2; }
+    .p-green { background-color: #b2f2bb; border-radius: 50%; color: #2b8a3e; }
 
-    /* Bottom Stats Bar */
-    .footer-stats {
+    /* Stats Bar at Bottom */
+    .stats-bar {
         display: flex; justify-content: space-around; align-items: center;
-        width: 280px; margin: 25px auto; padding: 10px;
-        border: 2.5px solid #82c91e; border-radius: 35px;
-        font-weight: bold; color: #333;
+        width: 280px; margin: 25px auto; padding: 8px;
+        border: 2px solid #82c91e; border-radius: 30px;
+        font-weight: bold; font-family: monospace;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -45,59 +58,59 @@ ELEMENTS = [
     "PHOSPHORUS", "SULPHUR", "CHLORINE", "ARGON", "POTASSIUM", "CALCIUM"
 ]
 
-# 12x12 Grid Data (Carefully Mapped)
-GRID_MAP = [
-    "H Y D R O G E N X B C A",
-    "E X L I T H I U M E B L",
-    "L A B E R Y L L I U M C",
-    "I C A R B O N M Q Y S I",
-    "U N I T R O G E N L P U",
-    "M B E R Y L L I U M S M",
-    "O X Y G E N A B C D F P",
-    "N E O N M A G N E S I U",
-    "P O T A S S I U M X Y S",
-    "S U L P H U R C H L O R",
-    "C H L O R I N E X Y Z A",
-    "A L U M I N I U M X Y Z"
+# 10x10 Grid Data
+RAW_GRID = [
+    "B O X Y G E N N N N", 
+    "L E A P T U E C I I", 
+    "O S R B Z G I A T T", 
+    "Z H W Y O J W R R R", 
+    "U R E R L R I B O O", 
+    "E B D L A L O O G G", 
+    "I Y M U I I I N E E", 
+    "H B R U D U H U N N", 
+    "L I T H I U M L M M", 
+    "C A L C I U M X Y Z"
 ]
 
-if 'found' not in st.session_state: st.session_state.found = []
-if 'start' not in st.session_state: st.session_state.start = time.time()
+if 'found_words' not in st.session_state: st.session_state.found_words = []
+if 'start_t' not in st.session_state: st.session_state.start_t = time.time()
 
-# --- HEADER: WORD LIST ---
+# --- TOP: WORD LIST ---
 st.markdown('<div class="word-bank">', unsafe_allow_html=True)
 for e in ELEMENTS:
-    status = "found" if e in st.session_state.found else ""
-    st.markdown(f'<span class="word-item {status}">{e}</span>', unsafe_allow_html=True)
+    status = "found" if e in st.session_state.found_words else ""
+    st.markdown(f'<span class="word-tag {status}">{e}</span>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- THE GRID ---
-st.markdown('<div class="grid-wrapper">', unsafe_allow_html=True)
-for r_idx, row_str in enumerate(GRID_MAP):
-    row_list = row_str.split()
-    for c_idx, char in enumerate(row_list):
-        # We can add a "highlight" class here for words found
-        st.markdown(f'<div class="letter-cell">{char}</div>', unsafe_allow_html=True)
+# --- MIDDLE: THE GRID (STRICT FORMAT) ---
+st.markdown('<div class="grid-container">', unsafe_allow_html=True)
+for r_idx, row_str in enumerate(RAW_GRID):
+    letters = row_str.split()
+    for c_idx, char in enumerate(letters):
+        # Apply the pill colors based on your screenshot
+        h = ""
+        if r_idx == 0 and c_idx in range(1,7): h = "p-red"   # OXYGEN
+        if r_idx == 8 and c_idx in range(0,7): h = "p-blue"  # LITHIUM
+        if c_idx == 9 and r_idx in range(0,9): h = "p-green" # NITROGEN
+        
+        st.markdown(f'<div class="letter-box {h}">{char}</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- FOOTER: TIMER ---
-elapsed = int(time.time() - st.session_state.start)
-mm, ss = divmod(elapsed, 60)
-st.markdown(f'<div class="footer-stats">⏱️ {mm:02d}:{ss:02d} 🧩+</div>', unsafe_allow_html=True)
+# --- BOTTOM: TIMER BAR ---
+elapsed = int(time.time() - st.session_state.start_t)
+m, s = divmod(elapsed, 60)
+st.markdown(f'<div class="stats-bar">⏱️ {m:02d}:{s:02d} 🧩+</div>', unsafe_allow_html=True)
 
-# --- USER INPUT ---
+# --- INPUT ---
 st.write("---")
-col_in, col_btn = st.columns([3, 1])
-with col_in:
-    guess = st.text_input("Found an element?", placeholder="Type name here...").upper().strip()
-with col_btn:
-    if st.button("Check"):
-        if guess in ELEMENTS and guess not in st.session_state.found:
-            st.session_state.found.append(guess)
-            st.rerun()
+guess = st.text_input("Found an element?", placeholder="Type name here...").upper().strip()
+if st.button("Verify Element"):
+    if guess in ELEMENTS and guess not in st.session_state.found_words:
+        st.session_state.found_words.append(guess)
+        st.rerun()
 
-if len(st.session_state.found) == 20:
+if len(st.session_state.found_words) == 20:
     st.balloons()
-    st.success("All 20 Elements Identified! Gate Mastered.")
-    
-st.markdown("<p style='text-align: center; color: #999; margin-top: 20px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+    st.success("All 20 Elements Identified!")
+
+st.markdown("<p style='text-align: center; color: #aaa; font-size: 10px; margin-top: 30px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
