@@ -14,10 +14,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 3. THE "FOCUSED" GAME BOX
-# We use 'margin-top: -150px' to pull the game up and hide the 'Start' header area
+# 3. THE "FOCUSED" GAME BOX (Now using the correct Component)
+# This creates the green-bordered container
 st.markdown("""
-    <div style="
+    <div id="game-container" style="
         width: 100%; 
         max-width: 450px; 
         height: 520px; 
@@ -27,20 +27,25 @@ st.markdown("""
         margin: 0 auto;
         box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         position: relative;">
-        
-        <iframe 
-            src="https://www.educaplay.com/game/28499055-first_8_elements_word_search.html" 
-            style="
-                width: 550px; 
-                height: 800px; 
-                position: absolute; 
-                top: -180px; 
-                left: -50px; 
-                border: none;"
-            allow="fullscreen; autoplay">
-        </iframe>
     </div>
 """, unsafe_allow_html=True)
+
+# This part actually injects the game into the screen
+with st.container():
+    components.html(
+        """
+        <div style="position: absolute; top: -180px; left: -50px;">
+            <iframe 
+                src="https://www.educaplay.com/game/28499055-first_8_elements_word_search.html" 
+                width="550px" 
+                height="800px" 
+                style="border: none;"
+                allow="fullscreen; autoplay">
+            </iframe>
+        </div>
+        """,
+        height=520, 
+    )
 
 # 4. Professional Project Footer
 st.markdown("""
