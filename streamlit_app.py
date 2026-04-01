@@ -1,17 +1,18 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.markdown("<h2 style='text-align: center; color: #2b8a3e;'>🧪 ELEMENT SEQUENCE MATCH</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #2b8a3e;'>🧪 ELEMENT DRAG-MATCH</h2>", unsafe_allow_html=True)
 
+# THE GAME ENGINE: Drag-to-Select Logic
 game_html = """
 <!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: white; margin: 0; padding: 10px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: white; margin: 0; padding: 10px; touch-action: none; user-select: none; }
         
-        .word-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; justify-content: center; max-width: 320px; }
+        .word-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; justify-content: center; max-width: 340px; }
         .word-item { font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; border: 1px solid #ddd; padding: 3px 6px; border-radius: 4px; }
         .crossed { text-decoration: line-through; color: #bbb; background: #f0f0f0; border-color: #eee; }
 
@@ -21,30 +22,29 @@ game_html = """
             gap: 4px; 
             background: #ffffff; 
             padding: 5px; 
+            position: relative;
         }
         
         .cell { 
             width: 32px; height: 32px; 
             display: flex; align-items: center; justify-content: center; 
             background: #fdfdfd; border: 1px solid #eee; 
-            font-weight: 800; font-size: 16px; cursor: pointer; 
-            user-select: none; border-radius: 5px;
+            font-weight: 800; font-size: 16px; border-radius: 5px;
+            pointer-events: none; /* Let the container handle the touch */
         }
 
-        /* Feedback Colors */
-        .selecting { background-color: #a5d8ff !important; color: #1971c2; transform: scale(1.1); }
-        .found { background-color: #b2f2bb !important; color: #2b8a3e; border-radius: 50%; border: none; }
+        .highlighted { background-color: #a5d8ff !important; color: #1971c2; }
+        .found { background-color: #b2f2bb !important; color: #2b8a3e; border-radius: 50% !important; border: none !important; }
 
-        .status-text { margin-top: 15px; font-size: 16px; font-weight: bold; color: #1971c2; min-height: 20px; }
-        .btn-clear { margin-top: 10px; padding: 8px 25px; border-radius: 20px; border: none; background: #fa5252; color: white; font-weight: bold; cursor: pointer; }
+        .status { margin-top: 15px; font-size: 16px; font-weight: bold; color: #1971c2; }
     </style>
 </head>
 <body>
 
     <div class="word-list" id="wordList"></div>
-    <div class="grid" id="gridBoard"></div>
-    <div class="status-text" id="status">Tap letters to spell...</div>
-    <button class="btn-clear" onclick="resetSelection()">Reset Selection</button>
+    <div class="grid" id="gridBoard" onmousedown="startSelect(event)" ontouchstart="startSelect(event)">
+        </div>
+    <div class="status" id="status">Drag across letters to spell!</div>
 
     <script>
         const elements = ["HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN", "SODIUM", "NEON"];
@@ -61,69 +61,85 @@ game_html = """
             "C", "A", "L", "C", "I", "U", "M", "X", "Y", "Z"
         ];
 
-        let selectedIndices = [];
+        let isDragging = false;
+        let currentSelection = [];
         let foundWords = [];
 
-        function updateDisplay() {
-            const listDiv = document.getElementById('wordList');
-            listDiv.innerHTML = elements.map(e => `<span class="word-item ${foundWords.includes(e) ? 'crossed' : ''}">${e}</span>`).join('');
-        }
-
+        // Build Board
         const board = document.getElementById('gridBoard');
         gridData.forEach((char, idx) => {
             const div = document.createElement('div');
             div.className = 'cell';
             div.innerText = char;
             div.id = 'cell-' + idx;
-            div.onclick = () => handleTap(idx, char);
             board.appendChild(div);
         });
 
-        function handleTap(idx, char) {
-            if (selectedIndices.includes(idx)) return; // Prevent double-tap
+        function updateList() {
+            document.getElementById('wordList').innerHTML = elements.map(e => 
+                `<span class="word-item ${foundWords.includes(e) ? 'crossed' : ''}">${e}</span>`).join('');
+        }
 
-            selectedIndices.push(idx);
-            document.getElementById('cell-' + idx).classList.add('selecting');
+        function startSelect(e) {
+            isDragging = true;
+            currentSelection = [];
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', endSelect);
+            document.addEventListener('touchmove', handleMove, {passive: false});
+            document.addEventListener('touchend', endSelect);
+            handleMove(e);
+        }
+
+        function handleMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
             
-            let currentString = selectedIndices.map(i => gridData[i]).join('');
-            document.getElementById('status').innerText = currentString;
-
-            // Check if string matches an element
-            if (elements.includes(currentString)) {
-                if (!foundWords.includes(currentString)) {
-                    foundWords.push(currentString);
-                    markAsFound();
-                    document.getElementById('status').innerText = "✓ " + currentString;
+            if (target && target.id.startsWith('cell-')) {
+                const idx = parseInt(target.id.split('-')[1]);
+                if (!currentSelection.includes(idx)) {
+                    currentSelection.push(idx);
+                    target.classList.add('highlighted');
+                    const word = currentSelection.map(i => gridData[i]).join('');
+                    document.getElementById('status').innerText = word;
                 }
             }
         }
 
-        function markAsFound() {
-            selectedIndices.forEach(idx => {
-                const el = document.getElementById('cell-' + idx);
-                el.classList.remove('selecting');
-                el.classList.add('found');
-            });
-            selectedIndices = [];
-            updateDisplay();
+        function endSelect() {
+            isDragging = false;
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', endSelect);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', endSelect);
+
+            const finalWord = currentSelection.map(i => gridData[i]).join('');
+            
+            if (elements.includes(finalWord) && !foundWords.includes(finalWord)) {
+                foundWords.push(finalWord);
+                currentSelection.forEach(idx => {
+                    const el = document.getElementById('cell-' + idx);
+                    el.classList.remove('highlighted');
+                    el.classList.add('found');
+                });
+                document.getElementById('status').innerText = "✓ " + finalWord;
+                updateList();
+            } else {
+                currentSelection.forEach(idx => {
+                    const el = document.getElementById('cell-' + idx);
+                    if (!el.classList.contains('found')) el.classList.remove('highlighted');
+                });
+                document.getElementById('status').innerText = "Try again!";
+            }
+            currentSelection = [];
         }
 
-        function resetSelection() {
-            selectedIndices.forEach(idx => {
-                const el = document.getElementById('cell-' + idx);
-                if (!el.classList.contains('found')) {
-                    el.classList.remove('selecting');
-                }
-            });
-            selectedIndices = [];
-            document.getElementById('status').innerText = "Selection Cleared";
-        }
-
-        updateDisplay();
+        updateList();
     </script>
 </body>
 </html>
 """
 
-components.html(game_html, height=550)
-st.markdown("<p style='text-align: center; color: #999; font-size: 12px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+components.html(game_html, height=580)
+st.markdown("<p style='text-align: center; color: #999; font-size: 11px;'>MSc | Chemical Games Engine by Favour</p>", unsafe_allow_html=True)
