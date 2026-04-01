@@ -15,9 +15,17 @@ if 'unlocked' not in st.session_state:
 
 target_word = ELEMENTS[st.session_state.lvl]
 
-# --- THE HIDDEN TRIGGER ---
-# This invisible button is clicked by the JavaScript when the user wins
-if st.button("🔓 UNLOCK SYSTEM", key="hidden_unlock", help="Internal use only"):
+# --- THE GHOST BUTTON (Invisible & Unclickable by Humans) ---
+st.markdown("""
+    <style>
+    /* This hides the specific button so players can't see or touch it */
+    div[data-testid="stButton"] button:has(div:contains("GHOST_UNLOCK")) {
+        display: none !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+if st.button("GHOST_UNLOCK"):
     st.session_state.unlocked = True
     st.rerun()
 
@@ -94,11 +102,11 @@ game_html = f"""
                 document.getElementById('msg-overlay').innerText = "CORRECT! ✨";
                 document.getElementById('msg-overlay').className = "msg-correct show-msg";
                 
-                // AUTOMATIC UNLOCK: This finds the hidden button in Streamlit and clicks it!
+                // THE GHOST CLICK: This finds the hidden button in Streamlit and clicks it!
                 setTimeout(() => {{
                     const buttons = window.parent.document.querySelectorAll('button');
                     for (const btn of buttons) {{
-                        if (btn.innerText.includes("UNLOCK SYSTEM")) {{
+                        if (btn.innerText.includes("GHOST_UNLOCK")) {{
                             btn.click();
                             break;
                         }}
@@ -133,24 +141,25 @@ components.html(game_html, height=450)
 
 st.write("---")
 
-# 5. THE HARD LOCK: Next Level button ONLY exists if st.session_state.unlocked is True
+# 5. THE REAL LOCK
 if st.session_state.unlocked:
     if st.button("🚀 PROCEED TO NEXT LEVEL", use_container_width=True):
         st.session_state.lvl += 1
-        st.session_state.unlocked = False # Relock for the next level
+        st.session_state.unlocked = False 
         if st.session_state.lvl >= len(ELEMENTS):
             st.session_state.lvl = 0
-            st.success("🏆 ALL LEVELS COMPLETE!")
         st.rerun()
 else:
-    st.warning("🔒 Level Locked: Solve the chemical puzzle to continue.")
+    # Use a disabled button look for the lock
+    st.button("🔒 LEVEL LOCKED", disabled=True, use_container_width=True)
 
 # 6. HOW TO PLAY
 st.markdown("""
-<div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333;">
-    <h4 style="margin:0; color: #1a2a6c;">📖 Instructions:</h4>
+<div style="background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #ddd; color: #333; margin-top: 10px;">
+    <h4 style="margin:0; color: #1a2a6c;">📖 How to Play:</h4>
     <p style="font-size: 14px;">1. Tap letters to spell the element.<br>
-    2. Once you see <b>CORRECT!</b>, the "Next Level" button will automatically unlock below.</p>
+    2. Once you see <b>CORRECT!</b>, the system will verify your answer.<br>
+    3. The <b>Next Level</b> button will then replace the lock!</p>
 </div>
 """, unsafe_allow_html=True)
 
