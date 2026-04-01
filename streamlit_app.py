@@ -25,7 +25,7 @@ ELEMENT_LIST = list(ELEMENTS_DB.keys())
 if 'lvl' not in st.session_state: st.session_state.lvl = 0
 target_word = ELEMENT_LIST[st.session_state.lvl]
 
-# 3. THE QUEST ENGINE (ADVENTURE AUDIO + APPLAUSE)
+# 3. THE QUEST ENGINE
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -88,14 +88,13 @@ game_html = f"""
     }}
 
     function playApplause() {{
-        // Synthesized applause sound using white noise bursts
         const dur = 1.5;
         for (let i = 0; i < 15; i++) {{
             const t = audioCtx.currentTime + (Math.random() * 0.5);
             const bufferSize = audioCtx.sampleRate * 0.2;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
-            for (let j = 0; j < bufferSize; j++) data[j] = Math.random() * 2 - 1;
+            for (let j = 0; j < bufferSize; j++) {{ data[j] = Math.random() * 2 - 1; }}
             const source = audioCtx.createBufferSource();
             const filter = audioCtx.createBiquadFilter();
             const gain = audioCtx.createGain();
@@ -114,12 +113,11 @@ game_html = f"""
             btn.innerText = "⚔️ QUEST THEME: ON";
             musicInterval = setInterval(() => {{
                 const t = audioCtx.currentTime;
-                // Adventure march bassline
                 playSound(82, 'triangle', 0.4, 0.04);
-                setTimeout(() => playSound(110, 'triangle', 0.2, 0.03), 200);
-                setTimeout(() => playSound(123, 'triangle', 0.2, 0.03), 400);
+                setTimeout(() => {{ playSound(110, 'triangle', 0.2, 0.03); }}, 200);
+                setTimeout(() => {{ playSound(123, 'triangle', 0.2, 0.03); }}, 400);
             }}, 1000);
-        } else {{
+        }} else {{
             clearInterval(musicInterval); musicInterval = null;
             btn.innerText = "⚔️ QUEST THEME: OFF";
         }}
@@ -131,9 +129,9 @@ game_html = f"""
         ansRow.innerHTML = ""; poolRow.innerHTML = "";
         for(let i=0; i<target.length; i++) {{
             let div = document.createElement('div'); div.className = 'tile';
-            if(!answer[i]) div.style.background = "rgba(255,255,255,0.05)";
+            if(!answer[i]) {{ div.style.background = "rgba(255,255,255,0.05)"; }}
             div.innerText = answer[i] || "?";
-            if(answer[i]) div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.05); removeLetter(i); }};
+            if(answer[i]) {{ div.onclick = () => {{ playSound(200, 'sine', 0.1, 0.05); removeLetter(i); }}; }}
             ansRow.appendChild(div);
         }}
         pool.forEach((char, i) => {{
@@ -169,7 +167,7 @@ components.html(game_html, height=290)
 
 # 5. DATA SHEET & VERIFICATION
 st.markdown("<div style='margin-top: -15px;'>", unsafe_allow_html=True)
-verify_text = st.text_input("📜 Scroll of Truth (Type name to unlock):", placeholder="Enter name...", label_visibility="collapsed")
+verify_text = st.text_input("📜 Scroll of Truth:", placeholder="Enter name...", label_visibility="collapsed")
 
 if verify_text.upper() == target_word:
     data = ELEMENTS_DB[target_word]
@@ -193,19 +191,15 @@ else:
     st.button("🔒 PATH BLOCKED", disabled=True, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 6. ENHANCED HOW TO PLAY (ADVENTURE STYLE)
+# 6. ENHANCED HOW TO PLAY
 st.markdown("---")
 st.markdown("""
 <div style="background: #2c3e50; padding: 18px; border-radius: 15px; border-left: 6px solid #f39c12; color: white;">
     <h3 style="margin-top:0; color: #f39c12;">🗺️ Quest Guide</h3>
-    <p style="font-size: 14px; line-height: 1.5;">
-        Brave Alchemist, you must restore the elements of the Periodic Table to their true form.
-    </p>
     <ul style="font-size: 14px; padding-left: 20px;">
-        <li style="margin-bottom: 8px;"><b>Loot Letters:</b> Tap letters in your Inventory to place them in the Quest Slots.</li>
-        <li style="margin-bottom: 8px;"><b>Rearrange:</b> Tap a misplaced letter in the slots to send it back to your Inventory.</li>
-        <li style="margin-bottom: 8px;"><b>Victory:</b> Spell the element correctly to receive the <b>Quest Complete</b> applause.</li>
-        <li style="margin-bottom: 8px;"><b>Scroll of Truth:</b> Enter the name into the scroll below to unlock the hidden lore and move to the next stage.</li>
+        <li style="margin-bottom: 8px;"><b>Loot Letters:</b> Tap letters to fill Quest Slots.</li>
+        <li style="margin-bottom: 8px;"><b>Victory:</b> Spell correctly to hear the <b>Applause</b>.</li>
+        <li style="margin-bottom: 8px;"><b>Scroll:</b> Type the name below to reveal lore and advance.</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
