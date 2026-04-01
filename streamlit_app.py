@@ -2,29 +2,52 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # 1. Page Configuration
-st.set_page_config(page_title="First 20 Elements", layout="centered")
+st.set_page_config(page_title="First 20 Elements Master", layout="centered")
 
-# 2. Professional Header (Matches your request)
+# 2. Project Header
 st.markdown("""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #2b8a3e; margin-bottom: 0;">🧪 First 20 Elements Word Search</h1>
-        <p style="color: #666; font-style: italic;">Mastering Chemical Symbols through Play</p>
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+        <h2 style="color: #2b8a3e; font-family: sans-serif; font-weight: 800;">
+            🧪 FIRST 20 ELEMENTS: LABORATORY GRID
+        </h2>
+        <p style="color: #666; font-size: 14px;">Find all chemical names to complete the gate.</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 3. THE "CLEAN" EMBED (Focusing only on the Start/Game area)
-# We use a div with 'overflow: hidden' to crop out the ads and website menus
+# 3. THE "FOCUSED" GAME BOX
+# We use 'margin-top: -150px' to pull the game up and hide the 'Start' header area
 st.markdown("""
-    <div style="display: flex; justify-content: center; overflow: hidden; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <div style="
+        width: 100%; 
+        max-width: 450px; 
+        height: 520px; 
+        overflow: hidden; 
+        border: 4px solid #82c91e; 
+        border-radius: 25px; 
+        margin: 0 auto;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        position: relative;">
+        
         <iframe 
             src="https://www.educaplay.com/game/28499055-first_8_elements_word_search.html" 
-            width="400" 
-            height="600" 
-            style="border:none; margin-top: -60px;" 
+            style="
+                width: 550px; 
+                height: 800px; 
+                position: absolute; 
+                top: -180px; 
+                left: -50px; 
+                border: none;"
             allow="fullscreen; autoplay">
         </iframe>
     </div>
 """, unsafe_allow_html=True)
 
-# 4. Professional Footer
-st.markdown("<br><p style='text-align: center; color: #999; font-size: 14px;'>Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
+# 4. Professional Project Footer
+st.markdown("""
+    <div style="text-align: center; margin-top: 30px;">
+        <hr style="border: 0.5px solid #eee; width: 50%; margin: 20px auto;">
+        <p style="color: #999; font-size: 12px; font-weight: bold; letter-spacing: 1px;">
+            DEVELOPED BY UKAZIM CHIDINMA FAVOUR
+        </p>
+    </div>
+""", unsafe_allow_html=True)
