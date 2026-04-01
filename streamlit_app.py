@@ -39,36 +39,7 @@ if 'lvl' not in st.session_state: st.session_state.lvl = 0
 if 'lives' not in st.session_state: st.session_state.lives = 3
 if 'game_over' not in st.session_state: st.session_state.game_over = False
 
-# --- THE GHOST SHIELD: ADVANCED CSS HIDING ---
-st.markdown("""
-    <style>
-    /* Completely remove the specific buttons from the visual flow */
-    button[kind="secondary"]:has(div:contains("💣")), 
-    button[kind="secondary"]:has(div:contains("")) {
-        display: none !important;
-        opacity: 0 !important;
-        position: absolute !important;
-        top: -9999px !important;
-        left: -9999px !important;
-        pointer-events: none !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# These buttons act as internal "listeners" for the JavaScript
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("💣"):
-        st.session_state.lives -= 1
-        if st.session_state.lives <= 0:
-            st.session_state.game_over = True
-        st.rerun()
-
-with col2:
-    if st.button(""):
-        st.session_state.lives += 2
-        st.rerun()
-
+# --- UI LOGIC ---
 target_word = st.session_state.order[st.session_state.lvl]
 
 # 3. THE GAME ENGINE
@@ -164,7 +135,7 @@ game_html = f"""
                 timerActive = false;
                 msg.innerText = "+2 ❤️ BONUS!";
                 msg.className = "msg-correct show-msg";
-                setTimeout(() => {{ triggerPython(""); }}, 500);
+                setTimeout(() => {{ triggerPython("💖"); }}, 500);
             }} else {{
                 msg.innerText = "-1 ❤️ PENALTY!";
                 msg.className = "msg-wrong show-msg";
@@ -236,4 +207,32 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# --- 7. THE HIDDEN ENGINE (AT THE VERY BOTTOM) ---
+# We put them in a tiny container and use CSS to shrink it to nothing.
+st.markdown("<div class='ghost-box'>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+.ghost-box { 
+    height: 0px !important; 
+    overflow: hidden !important; 
+    opacity: 0 !important;
+}
+button:has(div:contains("💣")), button:has(div:contains("💖")) {
+    height: 0px !important;
+    padding: 0px !important;
+    border: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+if st.button("💣"):
+    st.session_state.lives -= 1
+    if st.session_state.lives <= 0: st.session_state.game_over = True
+    st.rerun()
+
+if st.button("💖"):
+    st.session_state.lives += 2
+    st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #777; font-size:10px; margin-top:25px;'>MSc Project | Developed by Ukazim Chidinma Favour</p>", unsafe_allow_html=True)
